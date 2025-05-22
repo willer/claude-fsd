@@ -1,0 +1,208 @@
+#!/bin/bash
+
+set -e
+
+# Add counter for loop iterations
+LOOP_COUNTER=0
+
+while true; do
+    # Increment loop counter
+    LOOP_COUNTER=$((LOOP_COUNTER + 1))
+    
+    mkdir -p logs
+    # Use a temporary directory for tmp files, as codex is sandboxed to this directory
+    mkdir -p tmp
+    export TMPDIR=tmp/
+    LOGFILE="logs/claude-$(date +%Y%m%d_%H%M%S).txt"
+
+    echo "Logging to ${LOGFILE}-* ..."
+
+    echo -e "\033[32m==================================================================\033[0m"
+    echo -e "\033[32m== PLANNING NEXT TASK\033[0m"
+    echo -e "\033[32m==================================================================\033[0m"
+
+    # Check if this is the 4th iteration for megathinking mode
+    if [ $((LOOP_COUNTER % 4)) -eq 0 ]; then
+        echo -e "\033[33m**** MEGATHINKING MODE ACTIVATED ****\033[0m"
+        echo -e "\033[33mThis is your 4th development cycle. Taking a step back for architectural planning.\033[0m"
+        MEGATHINKING_MODE="**** MEGATHINKING MODE ACTIVATED ****\nThis is your 4th development cycle. Before proceeding with the next task, please take a step back and use megathinking mode to architecturally plan the next phase of development. Consider the overall structure of the codebase, potential refactoring opportunities, design patterns, technical debt, and how the current work connects to broader project goals.\n\n"
+    else
+        MEGATHINKING_MODE=""
+    fi
+
+    time claude -p "
+$MEGATHINKING_MODE
+Read docs/PLAN.md in order and tell me what's the first open task that needs to be 
+done by the developer. Include any context that relates to it , such as sub-bullet 
+points or the section the todo item lives in. 
+Also bring in any related context from BRIEF.md, docs/QUESTIONS.md and docs/REQUIREMENTS.md.
+Really think this through, as
+the developer will need not just to have blinders on when doing a dev task, but
+also sometimes will need to think about the bigger picture. Particularly if it's
+been stuck in the weeds making a ton of changes when sometimes a single fix
+can clear out a thousand errors. Please consider what are the lowest risk changes
+that achieve the task goal, since you knoow the full plan and the developer
+doesn't necessarily see it.
+
+If the plan is complete, say <ALL DONE>.
+" | tee >(cat > $LOGFILE-planner)
+
+    set +e
+    if grep -q "<ALL DONE>" $LOGFILE-planner; then
+        echo -e "\033[32mNo more tasks to do\033[0m"
+        exit 0
+    fi
+
+    nexttask=$(cat $LOGFILE-planner | grep -v "<ALL DONE>")
+    set -e
+
+    echo -e "\033[32m==================================================================\033[0m"
+    echo -e "\033[32m== RUNNING DEVELOPER TASK\033[0m"
+    echo -e "\033[32m==================================================================\033[0m"
+
+    # run the task
+    time claude --dangerously-skip-permissions -p "
+$MEGATHINKING_MODE
+You are an AI developer working within an automated development environment. Your role is 
+to complete tasks, plan implementations, and maintain high-quality code. Here is the 
+specific task you need to complete:
+
+<next_task>
+$nexttask
+</next_task>
+
+Before you begin working on this task, please follow these steps:
+
+1. Analyze the task with full megathinking and plan your approach. 
+Wrap your analysis in <task_analysis> tags inside your thinking block:
+   <task_analysis>
+   - Break down the task into clear, actionable steps
+   - For each step:
+     - Identify potential challenges
+     - Propose solutions for each challenge
+     - Consider architectural implications
+   - Ensure your plan adheres to clean code principles
+   - Consider how your changes will affect the overall system
+   - Verify that your approach uses defensive programming techniques
+   - Double-check that you're not implementing any 'cheats' (e.g., unnecessary fallbacks, ignoring issues, or marking tests to be ignored)
+   - Consider potential edge cases and how to handle them
+   - Think about testing strategies for your changes
+   - Evaluate the impact on system performance and scalability
+   </task_analysis>
+
+2. Execute the necessary changes or Bash commands to complete the task. 
+Wrap your code or commands in <execution> tags.
+
+3. If a linter is defined for this project, run it after your work. 
+Include the linter output in <linter_output> tags if applicable.
+
+4. Describe the changes you've made:
+   <changes>
+   - Provide a clear, concise summary of the implemented changes
+   - Explain any architectural decisions you made
+   - Highlight any potential areas of concern or future considerations
+   - Confirm that your implementation uses defensive programming techniques
+   - Verify that all failure modes throw exceptions rather than using silent warnings or fallbacks
+   - Describe how you've addressed potential edge cases
+   - Outline the testing strategy implemented for these changes
+   </changes>
+
+5. If you have any questions for future reference, add them to the QUESTIONS.md file. Wrap these additions in <questions_update> tags.
+
+6. If you have any ideas for future improvements or features, add them to the IDEAS.md file. Wrap these additions in <ideas_update> tags.
+
+Important guidelines to follow:
+- Prioritize simplicity in your code and project structure
+- Always use git for version control; do not create backup copies
+- Delete unused code and options
+- Maintain clean directory structures and consistent file placement
+- Be brutally honest about potential issues or disagreements with the given task
+- Throw exceptions for errors instead of adding fallbacks; errors should be visible and fixable
+- Focus on creating a bulletproof system
+- Create unit and integration tests whenever possible, focusing on real system interactions
+- Maintain web tests in a WEBTESTS.md file if applicable
+- Add lint/architecture/static code analysis tests as you go
+- Run cheap and easy tests (lint, architecture, unit) frequently during development
+
+Remember, your work will be reviewed before being committed to the repository. Ensure your changes are well-documented and adhere to the project's standards and best practices.
+
+Your final output should consist of the following sections in this order:
+1. <execution>
+2. <linter_output> (if applicable)
+3. <changes>
+4. <questions_update> summarizing the questions you added to QUESTIONS.md
+5. <ideas_update> summarizing the ideas you added to IDEAS.md
+
+Do not include any additional commentary or explanations outside of these tagged sections. Your final output should not duplicate or rehash any of the work you did in the task analysis section.
+" | tee >(cat > $LOGFILE-developer)
+
+    echo -e "\033[32m==================================================================\033[0m"
+    echo -e "\033[32m== REVIEWING WORK (backgrounded)\033[0m"
+    echo -e "\033[32m==================================================================\033[0m"
+
+    # run the static code reviewer (codex can't do the git push part yet, so we need to follow up with claude after)
+    # also run it in the background because it's very slow
+    (codex --full-auto -q "
+You are the team's static code reviewer.
+A developer has completed this task: $nexttask
+The developer's notes are at $LOGFILE-developer .
+
+Related docs:
+- BRIEF.md
+- docs/PLAN.md
+- docs/QUESTIONS.md
+- docs/REQUIREMENTS.md
+- README.md
+
+Please review the task and make sure it's complete, and done to satisfaction.
+DO NOT trust the developer's notes, always review the code and build/test results yourself.
+Look for typical 'cheating' patterns, such as turning off unit tests, taking files
+out of the compilation configuration, and redefining the plan to skip tasks
+that aren't working.
+
+If the task is not complete, adjust the item in docs/PLAN.md with suggestions for 
+the developer to complete the task properly.
+
+If you have any questions of the user for the future, you can add them to QUESTIONS.md.
+If you have any ideas for the future, you can add them to IDEAS.md.
+" > $LOGFILE-reviewer) &
+
+    echo -e "\033[32m==================================================================\033[0m"
+    echo -e "\033[32m== REVIEWING/TESTING/COMMITTING WORK\033[0m"
+    echo -e "\033[32m==================================================================\033[0m"
+
+    # run the reviewer/tester
+    time claude --dangerously-skip-permissions -p "
+You are a megathinking reviewer, tester, and architect. 
+A developer has completed this task: $nexttask
+
+The developer's notes are at $LOGFILE-developer .
+The static code reviewer reviewed the code and its (possibly partial) result is at $LOGFILE-reviewer .
+
+Related docs:
+- BRIEF.md
+- docs/PLAN.md
+- docs/QUESTIONS.md
+- docs/REQUIREMENTS.md
+- README.md
+
+Please review the task and uncommitted changes, and make sure the task is complete, and done to satisfaction.
+DO NOT trust the developer's notes, always review the code and build/test results yourself.
+Look for typical 'cheating' patterns, such as turning off unit tests, taking files
+out of the compilation configuration, and redefining the plan to skip tasks
+that aren't working.
+If there's a linter defined for this project, run it.
+
+If the task is not complete, adjust the item in docs/PLAN.md with suggestions for 
+the developer to complete the task properly.
+
+If the task is complete and we're happy with the code, run a git commit+push.
+
+If you have any questions of the user for the future, you can add them to QUESTIONS.md.
+If you have any ideas for the future, you can add them to IDEAS.md.
+" | tee >(cat > $LOGFILE-tester)
+
+    sleep 1
+done
+
+

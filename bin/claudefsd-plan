@@ -1,0 +1,71 @@
+#!/bin/bash
+
+set -e
+
+mkdir -p logs
+
+# Use a temporary directory for tmp files, as codex is sandboxed to this directory
+mkdir -p tmp
+export TMPDIR=tmp/
+
+# look for a brief file
+if [ ! -f BRIEF.md ]; then
+    echo "No BRIEF.md file found, please create one first "
+    exit 1
+fi
+
+if [ "$EDITOR" == "" ]; then
+    EDITOR="nano"
+fi
+
+LOGFILE="logs/claude-$(date +%Y%m%d_%H%M%S).txt"
+
+echo -e "\033[32m==================================================================\033[0m"
+echo -e "\033[32m== ANALYZING PROJECT BRIEF\033[0m"
+echo -e "\033[32m==================================================================\033[0m"
+
+prompt1="
+Read all of these documents if they exist:
+- BRIEF.md -- the project brief
+- docs/REQUIREMENTS.md -- the project requirements
+- docs/PLAN.md -- the project plan
+- docs/QUESTIONS.md -- the project questions
+- docs/IDEAS.md -- the backlog of future ideas
+- docs/WEBTESTS.md -- the project web tests
+- README.md -- the project README
+
+Your job, as a megathinking business analyst, project manager, architect and product manager, is to help solidify
+the requirements and plan. 
+
+1. Read through all of these documents and follow any references on the web to read more background.
+2. Add 10 relevant questions to docs/QUESTIONS.md to expand on the brief and requirements.
+3. Create the document docs/QUESTIONS.md if it doesn't exist.
+
+Try to think of typical assumptions an AI or developer would make, and add questions to address them directly.
+
+As part of this work, please consider our SDLC and what infrastructure will need to be established to ensure
+the system is compliant. Make sure the basics like a git repo and a pre-commit hook that call a custom
+linter are in the plan to be established if they don't exist now. 
+Also make sure our work is being done on a feature branch.
+Other than that, DO NOT get distracted by infrastructure, stick with the YAGNI principle.
+Just ensure the basic branching and linter is working and move on.
+Focus on the user's brief and answers from docs/QUESTIONS.md, and the plan.
+"
+
+# run BA's
+echo "Running claude..."
+claude --dangerously-skip-permissions -p "$prompt1" | tee >(cat > $LOGFILE-ba1)
+echo "Running codex o3 (results won't display)..."
+codex -m o3 --full-auto -q "$prompt1" > $LOGFILE-ba2
+
+echo -e "\033[32m==================================================================\033[0m"
+echo -e "\033[32m== ANSWER THE QUESTIONS IN QUESTIONS.md\033[0m"
+echo -e "\033[32m==================================================================\033[0m"
+
+echo "Press enter to continue..."
+read -n 1 -s
+
+echo "Opening QUESTIONS.md in $EDITOR..."
+$EDITOR QUESTIONS.md
+
+/usr/local/bin/claudefsd-plan-gen

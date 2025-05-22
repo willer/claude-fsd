@@ -1,0 +1,25 @@
+{
+  "name": "claude-fsd",
+  "version": "1.0.0",
+  "description": "Claude Full Stack Development tools for managing development projects",
+  "bin": {
+    "claudefsd-dev": "./bin/claudefsd-dev",
+    "claudefsd-plan": "./bin/claudefsd-plan",
+    "claudefsd-plan-gen": "./bin/claudefsd-plan-gen"
+  },
+  "keywords": [
+    "claude",
+    "development",
+    "project-management",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/claude-fsd.git"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
