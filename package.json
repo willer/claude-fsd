@@ -1,14 +1,14 @@
 {
   "name": "claude-fsd",
-  "version": "1.1.5",
+  "version": "1.2.0",
   "description": "Claude Full Stack Development tools for managing development projects",
   "bin": {
     "claude-fsd": "./bin/claude-fsd",
     "claudefsd": "./bin/claudefsd",
     "claudefsd-check-dependencies": "./bin/claudefsd-check-dependencies",
     "claudefsd-dev": "./bin/claudefsd-dev",
-    "claudefsd-plan": "./bin/claudefsd-plan",
-    "claudefsd-plan-gen": "./bin/claudefsd-plan-gen"
+    "claudefsd-analyze-brief": "./bin/claudefsd-analyze-brief",
+    "claudefsd-create-plan": "./bin/claudefsd-create-plan"
   },
   "files": [
     "bin/"
