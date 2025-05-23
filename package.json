@@ -1,6 +1,6 @@
 {
   "name": "claude-fsd",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Claude Full Stack Development tools for managing development projects",
   "bin": {
     "claudefsd": "./bin/claudefsd",
@@ -8,6 +8,9 @@
     "claudefsd-plan": "./bin/claudefsd-plan",
     "claudefsd-plan-gen": "./bin/claudefsd-plan-gen"
   },
+  "files": [
+    "bin/"
+  ],
   "keywords": [
     "claude",
     "development",
