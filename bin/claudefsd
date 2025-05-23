@@ -9,7 +9,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # Source the dependency checker
-source "$(dirname "$0")/check-dependencies.sh"
+source "$(dirname "$0")/claudefsd-check-dependencies"
 
 # Function to display the menu
 show_menu() {

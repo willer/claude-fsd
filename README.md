@@ -25,7 +25,7 @@ npm install -g claude-fsd
 
 Just run:
 ```bash
-claudefsd
+claude-fsd    # or claudefsd - both work the same
 ```
 
 You'll get an interactive menu to choose what you want to do. It's that simple!
@@ -34,10 +34,13 @@ You'll get an interactive menu to choose what you want to do. It's that simple!
 
 ### Main wrapper command
 ```bash
-claudefsd         # Interactive mode (recommended for beginners)
-claudefsd dev     # Jump straight into development mode
-claudefsd plan    # Jump straight into planning mode
-claudefsd plan-gen # Generate a new project plan
+claude-fsd        # Interactive mode (recommended for beginners)
+claude-fsd dev    # Jump straight into development mode
+claude-fsd plan   # Jump straight into planning mode
+claude-fsd plan-gen # Generate a new project plan
+
+# claudefsd also works the same way
+claudefsd         # Same as claude-fsd
 ```
 
 ### Individual commands (if you know what you're doing)

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Alias for claudefsd - makes the command match the package name
+exec "$(dirname "$0")/claudefsd" "$@"

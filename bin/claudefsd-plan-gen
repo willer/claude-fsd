@@ -3,7 +3,7 @@
 set -e
 
 # Check dependencies
-$(dirname "$0")/check-dependencies.sh
+$(dirname "$0")/claudefsd-check-dependencies
 
 mkdir -p logs
 
