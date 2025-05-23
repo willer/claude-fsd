@@ -29,7 +29,7 @@ check_dependencies() {
     fi
     
     # Check for OPENAI_API_KEY (optional for codex)
-    if [ "$check_codex" = true ] && [[ ! -v OPENAI_API_KEY ]] || [[ -z "$OPENAI_API_KEY" ]]; then
+    if [ "$check_codex" = true ] && ([[ ! -v OPENAI_API_KEY ]] || [[ -z "$OPENAI_API_KEY" ]]); then
         warnings+=("OPENAI_API_KEY is not set. Codex features will be limited.")
         warnings+=("Set it with: export OPENAI_API_KEY='your-key-here'")
     fi
