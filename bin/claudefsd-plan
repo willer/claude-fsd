@@ -68,4 +68,4 @@ read -n 1 -s
 echo "Opening QUESTIONS.md in $EDITOR..."
 $EDITOR QUESTIONS.md
 
-/usr/local/bin/claudefsd-plan-gen
+$(dirname "$0")/claudefsd-plan-gen

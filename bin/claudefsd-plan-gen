@@ -58,7 +58,7 @@ echo -e "\033[32m===============================================================
 echo -e "\033[32m== DONE\033[0m"
 echo -e "\033[32m==================================================================\033[0m"
 echo "You can now run claudefsd-dev to start the development process."
-echo "Or do one more round of $0 to cover more questions."
+echo "Or do one more round of claudefsd-plan to cover more questions."
 
 
 

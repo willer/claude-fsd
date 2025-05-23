@@ -1,6 +1,6 @@
 {
   "name": "claude-fsd",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Claude Full Stack Development tools for managing development projects",
   "bin": {
     "claudefsd-dev": "./bin/claudefsd-dev",
