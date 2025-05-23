@@ -21,8 +21,8 @@ show_menu() {
     echo "What would you like to do?"
     echo
     echo "  1) Development mode (default) - AI agents work on coding tasks"
-    echo "  2) Planning mode - AI agents help plan your project"
-    echo "  3) Generate initial plan - Create a new project plan from scratch"
+    echo "  2) Analyze brief - Generate questions from project brief"
+    echo "  3) Create plan - Generate requirements and plan from answered questions"
     echo "  4) Exit"
     echo
 }
@@ -43,14 +43,64 @@ if [ $# -eq 0 ]; then
             exec "$(dirname "$0")/claudefsd-dev"
             ;;
         2)
-            echo -e "${GREEN}Starting planning mode...${NC}"
+            echo -e "${GREEN}Analyzing brief and generating questions...${NC}"
             echo
-            exec "$(dirname "$0")/claudefsd-plan"
+            "$(dirname "$0")/claudefsd-analyze-brief"
+            
+            if [ $? -eq 0 ]; then
+                echo
+                echo -e "${GREEN}Questions generated in docs/QUESTIONS.md${NC}"
+                echo "Please answer the questions before proceeding."
+                echo
+                echo "What editor would you like to use?"
+                echo "  1) nano (default)"
+                echo "  2) vim"
+                echo "  3) code (VS Code)"
+                echo "  4) cursor"
+                echo "  5) other"
+                echo
+                read -p "Enter your choice [1]: " editor_choice
+                editor_choice=${editor_choice:-1}
+                
+                case $editor_choice in
+                    1|"")
+                        nano docs/QUESTIONS.md
+                        ;;
+                    2)
+                        vim docs/QUESTIONS.md
+                        ;;
+                    3)
+                        code docs/QUESTIONS.md
+                        echo "Please answer the questions in VS Code, then press Enter to continue..."
+                        read -n 1 -s
+                        ;;
+                    4)
+                        cursor docs/QUESTIONS.md
+                        echo "Please answer the questions in Cursor, then press Enter to continue..."
+                        read -n 1 -s
+                        ;;
+                    5)
+                        read -p "Enter editor command: " custom_editor
+                        $custom_editor docs/QUESTIONS.md
+                        echo "Please answer the questions, then press Enter to continue..."
+                        read -n 1 -s
+                        ;;
+                    *)
+                        echo -e "${RED}Invalid choice. Please edit docs/QUESTIONS.md manually and run option 3 when ready.${NC}"
+                        exit 1
+                        ;;
+                esac
+                
+                echo
+                echo -e "${GREEN}Now creating plan from answered questions...${NC}"
+                echo
+                exec "$(dirname "$0")/claudefsd-create-plan"
+            fi
             ;;
         3)
-            echo -e "${GREEN}Starting plan generation...${NC}"
+            echo -e "${GREEN}Creating plan from answered questions...${NC}"
             echo
-            exec "$(dirname "$0")/claudefsd-plan-gen"
+            exec "$(dirname "$0")/claudefsd-create-plan"
             ;;
         4)
             echo "Goodbye!"
@@ -68,13 +118,13 @@ else
             shift
             exec "$(dirname "$0")/claudefsd-dev" "$@"
             ;;
-        plan)
+        analyze-brief)
             shift
-            exec "$(dirname "$0")/claudefsd-plan" "$@"
+            exec "$(dirname "$0")/claudefsd-analyze-brief" "$@"
             ;;
-        plan-gen)
+        create-plan)
             shift
-            exec "$(dirname "$0")/claudefsd-plan-gen" "$@"
+            exec "$(dirname "$0")/claudefsd-create-plan" "$@"
             ;;
         *)
             echo -e "${RED}Unknown command: $1${NC}"
@@ -82,9 +132,9 @@ else
             echo "Usage: claudefsd [command]"
             echo
             echo "Commands:"
-            echo "  dev       - Run development mode"
-            echo "  plan      - Run planning mode"
-            echo "  plan-gen  - Generate initial plan"
+            echo "  dev           - Run development mode"
+            echo "  analyze-brief - Analyze brief and generate questions"
+            echo "  create-plan   - Create plan from answered questions"
             echo
             echo "Run without arguments for interactive mode."
             exit 1

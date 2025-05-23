@@ -30,29 +30,29 @@ echo -e "\033[32m===============================================================
 prompt1="
 Read all of these documents if they exist:
 - BRIEF.md -- the project brief
-- docs/REQUIREMENTS.md -- the project requirements
+- docs/CLAUDE-NOTES.md -- AI's working notes and understanding
 - docs/PLAN.md -- the project plan
 - docs/QUESTIONS.md -- the project questions
 - docs/IDEAS.md -- the backlog of future ideas
 - docs/WEBTESTS.md -- the project web tests
 - README.md -- the project README
 
-Your job, as a megathinking business analyst, project manager, architect and product manager, is to help solidify
-the requirements and plan. 
+Your job, as a megathinking business analyst, is to analyze the project brief and generate clarifying questions.
 
-1. Read through all of these documents and follow any references on the web to read more background.
-2. Add 10 relevant questions to docs/QUESTIONS.md to expand on the brief and requirements.
-3. Create the document docs/QUESTIONS.md if it doesn't exist.
+1. Read through the BRIEF.md and any existing documents to understand the project.
+2. Generate 10-15 relevant questions to clarify ambiguous aspects of the brief.
+3. Create or update docs/QUESTIONS.md with these questions.
+4. Focus on questions that would help an AI developer avoid making incorrect assumptions.
 
-Try to think of typical assumptions an AI or developer would make, and add questions to address them directly.
+Types of questions to include:
+- Technical architecture and platform choices
+- User experience and interface requirements
+- Data requirements and integrations
+- Performance and scalability expectations
+- Security and compliance needs
+- Deployment and operational requirements
 
-As part of this work, please consider our SDLC and what infrastructure will need to be established to ensure
-the system is compliant. Make sure the basics like a git repo and a pre-commit hook that call a custom
-linter are in the plan to be established if they don't exist now. 
-Also make sure our work is being done on a feature branch.
-Other than that, DO NOT get distracted by infrastructure, stick with the YAGNI principle.
-Just ensure the basic branching and linter is working and move on.
-Focus on the user's brief and answers from docs/QUESTIONS.md, and the plan.
+DO NOT answer the questions yourself - just generate them for the user to answer.
 "
 
 # run BA's
@@ -68,13 +68,7 @@ else
 fi
 
 echo -e "\033[32m==================================================================\033[0m"
-echo -e "\033[32m== ANSWER THE QUESTIONS IN QUESTIONS.md\033[0m"
+echo -e "\033[32m== ANALYSIS COMPLETE\033[0m"
 echo -e "\033[32m==================================================================\033[0m"
-
-echo "Press enter to continue..."
-read -n 1 -s
-
-echo "Opening QUESTIONS.md in $EDITOR..."
-$EDITOR QUESTIONS.md
-
-$(dirname "$0")/claudefsd-plan-gen
+echo "Questions have been generated in docs/QUESTIONS.md"
+echo "Please answer these questions before proceeding to create the plan."

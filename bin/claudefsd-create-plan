@@ -1,0 +1,83 @@
+#!/bin/bash
+
+set -e
+
+# Check dependencies
+$(dirname "$0")/claudefsd-check-dependencies
+
+mkdir -p logs
+
+# Use a temporary directory for tmp files, as codex is sandboxed to this directory
+mkdir -p tmp
+export TMPDIR=tmp/
+
+# look for required files
+if [ ! -f BRIEF.md ]; then
+    echo "No BRIEF.md file found, please create one first "
+    exit 1
+fi
+
+if [ ! -f docs/QUESTIONS.md ]; then
+    echo "No docs/QUESTIONS.md file found. Please run 'claudefsd analyze-brief' first to generate questions."
+    exit 1
+fi
+
+LOGFILE="logs/claude-$(date +%Y%m%d_%H%M%S).txt"
+
+echo -e "\033[32m==================================================================\033[0m"
+echo -e "\033[32m== CREATING PLAN FROM ANSWERED QUESTIONS\033[0m"
+echo -e "\033[32m==================================================================\033[0m"
+
+    prompt2="
+Read all of these documents if they exist:
+- BRIEF.md -- the project brief
+- docs/CLAUDE-NOTES.md -- AI's working notes and understanding
+- docs/PLAN.md -- the project plan
+- docs/QUESTIONS.md -- the project questions (with answers)
+- docs/IDEAS.md -- the backlog of future ideas
+- docs/WEBTESTS.md -- the project web tests
+- README.md -- the project README
+
+Your job, as a megathinking architect and project manager, is to create the project plan and working notes.
+
+1. Read through the BRIEF.md and the answered questions in docs/QUESTIONS.md.
+2. Update or create docs/CLAUDE-NOTES.md with your interpretation and understanding of the project.
+3. Update or create docs/PLAN.md with a detailed implementation plan based on the brief and answered questions.
+
+The CLAUDE-NOTES.md should contain:
+- Your understanding of the project goals and requirements
+- Key technical decisions and rationale
+- Important assumptions and constraints
+- Areas that may need future clarification
+
+The PLAN.md should contain:
+- Ordered list of development tasks with [ ] checkboxes
+- Each task should be specific and actionable
+- Include infrastructure setup (git, linting, testing) as early tasks
+- Group related tasks into logical phases
+
+Ensure the plan includes basic SDLC infrastructure like git repo setup, pre-commit hooks, and linting.
+Use feature branches for development work. Follow YAGNI principle - don't over-engineer.
+"
+
+# run BA's
+echo "Running claude..."
+claude --dangerously-skip-permissions -p "$prompt2" | tee >(cat > $LOGFILE-ba3-$round)
+
+# Only run codex if available
+if command -v codex >/dev/null 2>&1; then
+    echo "Running codex o3 (results won't display)..."
+    codex -m o3 --full-auto -q "$prompt2" > $LOGFILE-ba4-$round
+else
+    echo "Codex not available, skipping o3 analysis" > $LOGFILE-ba4-$round
+fi
+
+echo -e "\033[32m==================================================================\033[0m"
+echo -e "\033[32m== PLAN CREATION COMPLETE\033[0m"
+echo -e "\033[32m==================================================================\033[0m"
+echo "Plan created in docs/PLAN.md"
+echo "Working notes saved in docs/CLAUDE-NOTES.md"
+echo "You can now run 'claudefsd dev' to start the development process."
+
+
+

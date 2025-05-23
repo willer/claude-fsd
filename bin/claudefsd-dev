@@ -38,7 +38,7 @@ $MEGATHINKING_MODE
 Read docs/PLAN.md in order and tell me what's the first open task that needs to be 
 done by the developer. Include any context that relates to it , such as sub-bullet 
 points or the section the todo item lives in. 
-Also bring in any related context from BRIEF.md, docs/QUESTIONS.md and docs/REQUIREMENTS.md.
+Also bring in any related context from BRIEF.md, docs/QUESTIONS.md and docs/CLAUDE-NOTES.md.
 Really think this through, as
 the developer will need not just to have blinders on when doing a dev task, but
 also sometimes will need to think about the bigger picture. Particularly if it's
@@ -62,6 +62,12 @@ If the plan is complete, say <ALL DONE>.
     echo -e "\033[32m==================================================================\033[0m"
     echo -e "\033[32m== RUNNING DEVELOPER TASK\033[0m"
     echo -e "\033[32m==================================================================\033[0m"
+
+    # Show megathinking banner for developer if active
+    if [ $((LOOP_COUNTER % 4)) -eq 0 ]; then
+        echo -e "\033[33m**** MEGATHINKING MODE ACTIVATED ****\033[0m"
+        echo -e "\033[33mThis is your 4th development cycle. Taking a step back for architectural planning.\033[0m"
+    fi
 
     # run the task
     time claude --dangerously-skip-permissions -p "
@@ -156,7 +162,7 @@ Related docs:
 - BRIEF.md
 - docs/PLAN.md
 - docs/QUESTIONS.md
-- docs/REQUIREMENTS.md
+- docs/CLAUDE-NOTES.md
 - README.md
 
 Please review the task and make sure it's complete, and done to satisfaction.
@@ -191,7 +197,7 @@ Related docs:
 - BRIEF.md
 - docs/PLAN.md
 - docs/QUESTIONS.md
-- docs/REQUIREMENTS.md
+- docs/CLAUDE-NOTES.md
 - README.md
 
 Please review the task and uncommitted changes, and make sure the task is complete, and done to satisfaction.
