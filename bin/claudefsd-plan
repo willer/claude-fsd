@@ -2,6 +2,9 @@
 
 set -e
 
+# Check dependencies
+$(dirname "$0")/check-dependencies.sh
+
 mkdir -p logs
 
 # Use a temporary directory for tmp files, as codex is sandboxed to this directory
@@ -55,8 +58,14 @@ Focus on the user's brief and answers from docs/QUESTIONS.md, and the plan.
 # run BA's
 echo "Running claude..."
 claude --dangerously-skip-permissions -p "$prompt1" | tee >(cat > $LOGFILE-ba1)
-echo "Running codex o3 (results won't display)..."
-codex -m o3 --full-auto -q "$prompt1" > $LOGFILE-ba2
+
+# Only run codex if available
+if command -v codex >/dev/null 2>&1; then
+    echo "Running codex o3 (results won't display)..."
+    codex -m o3 --full-auto -q "$prompt1" > $LOGFILE-ba2
+else
+    echo "Codex not available, skipping o3 analysis" > $LOGFILE-ba2
+fi
 
 echo -e "\033[32m==================================================================\033[0m"
 echo -e "\033[32m== ANSWER THE QUESTIONS IN QUESTIONS.md\033[0m"

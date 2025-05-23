@@ -1,0 +1,93 @@
+#!/bin/bash
+
+set -e
+
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Source the dependency checker
+source "$(dirname "$0")/check-dependencies.sh"
+
+# Function to display the menu
+show_menu() {
+    echo -e "${GREEN}🤖 Claude Full Stack Development (FSD) Tool${NC}"
+    echo
+    echo "This tool helps you manage development projects using AI agents."
+    echo "Think of it as your AI-powered development team!"
+    echo
+    echo "What would you like to do?"
+    echo
+    echo "  1) Development mode (default) - AI agents work on coding tasks"
+    echo "  2) Planning mode - AI agents help plan your project"
+    echo "  3) Generate initial plan - Create a new project plan from scratch"
+    echo "  4) Exit"
+    echo
+}
+
+# Check dependencies first
+check_dependencies
+
+# If no arguments provided, show interactive menu
+if [ $# -eq 0 ]; then
+    show_menu
+    read -p "Enter your choice [1]: " choice
+    choice=${choice:-1}  # Default to 1 if empty
+    
+    case $choice in
+        1)
+            echo -e "${GREEN}Starting development mode...${NC}"
+            echo
+            exec "$(dirname "$0")/claudefsd-dev"
+            ;;
+        2)
+            echo -e "${GREEN}Starting planning mode...${NC}"
+            echo
+            exec "$(dirname "$0")/claudefsd-plan"
+            ;;
+        3)
+            echo -e "${GREEN}Starting plan generation...${NC}"
+            echo
+            exec "$(dirname "$0")/claudefsd-plan-gen"
+            ;;
+        4)
+            echo "Goodbye!"
+            exit 0
+            ;;
+        *)
+            echo -e "${RED}Invalid choice. Please run again.${NC}"
+            exit 1
+            ;;
+    esac
+else
+    # If arguments provided, pass them through to the appropriate command
+    case "$1" in
+        dev)
+            shift
+            exec "$(dirname "$0")/claudefsd-dev" "$@"
+            ;;
+        plan)
+            shift
+            exec "$(dirname "$0")/claudefsd-plan" "$@"
+            ;;
+        plan-gen)
+            shift
+            exec "$(dirname "$0")/claudefsd-plan-gen" "$@"
+            ;;
+        *)
+            echo -e "${RED}Unknown command: $1${NC}"
+            echo
+            echo "Usage: claudefsd [command]"
+            echo
+            echo "Commands:"
+            echo "  dev       - Run development mode"
+            echo "  plan      - Run planning mode"
+            echo "  plan-gen  - Generate initial plan"
+            echo
+            echo "Run without arguments for interactive mode."
+            exit 1
+            ;;
+    esac
+fi
