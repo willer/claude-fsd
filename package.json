@@ -1,7 +1,7 @@
 {
   "name": "claude-fsd",
-  "version": "1.2.0",
-  "description": "Claude Full Stack Development tools for managing development projects",
+  "version": "1.2.1",
+  "description": "Claude Full Self Drive tools for autonomous AI-powered development",
   "bin": {
     "claude-fsd": "./bin/claude-fsd",
     "claudefsd": "./bin/claudefsd",

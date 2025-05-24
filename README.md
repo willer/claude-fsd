@@ -1,6 +1,6 @@
 # claude-fsd
 
-Claude Full Stack Development (FSD) - Your AI-powered development team in a box.
+Claude Full Self Drive (FSD) - Your AI-powered development team on autopilot.
 
 ## What is this?
 
@@ -13,7 +13,7 @@ This tool takes that concept to the next level by creating an entire **agent fle
 - 👀 **Reviewer Agent**: Reviews code quality, catches issues, ensures best practices
 - 🧪 **Tester Agent**: Runs tests, validates changes, commits clean code
 
-Think of it as having a full development team that never sleeps, never gets tired, and always follows best practices. The AI agents work in cycles, planning tasks, implementing them, reviewing the work, and then moving on to the next task.
+Think of it as having a full development team on autopilot - like Tesla's Full Self-Driving, but for code! The AI agents work in cycles, planning tasks, implementing them, reviewing the work, and then moving on to the next task, with minimal human intervention.
 
 ## Installation
 

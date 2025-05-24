@@ -13,10 +13,10 @@ source "$(dirname "$0")/claudefsd-check-dependencies"
 
 # Function to display the menu
 show_menu() {
-    echo -e "${GREEN}🤖 Claude Full Stack Development (FSD) Tool${NC}"
+    echo -e "${GREEN}🤖 Claude Full Self Drive (FSD) Tool${NC}"
     echo
     echo "This tool helps you manage development projects using AI agents."
-    echo "Think of it as your AI-powered development team!"
+    echo "Think of it as your AI-powered development team on autopilot!"
     echo
     echo "What would you like to do?"
     echo
