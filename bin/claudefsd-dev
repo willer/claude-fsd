@@ -50,14 +50,7 @@ doesn't necessarily see it.
 If the plan is complete, say <ALL DONE>.
 " | tee >(cat > $LOGFILE-planner)
 
-    set +e
-    if grep -q "<ALL DONE>" $LOGFILE-planner; then
-        echo -e "\033[32mNo more tasks to do\033[0m"
-        exit 0
-    fi
-
-    nexttask=$(cat $LOGFILE-planner | grep -v "<ALL DONE>")
-    set -e
+    nexttask=$(cat $LOGFILE-planner)
 
     echo -e "\033[32m==================================================================\033[0m"
     echo -e "\033[32m== RUNNING DEVELOPER TASK\033[0m"
@@ -200,6 +193,13 @@ Related docs:
 - docs/CLAUDE-NOTES.md
 - README.md
 
+IMPORTANT: First check if the planner declared the plan complete with <ALL DONE>. If so, you must verify this by:
+1. Ensuring ALL code compiles successfully
+2. Running ALL tests and linters
+3. Confirming there are truly no remaining tasks
+
+Only declare the project complete by outputting <VERIFIED_ALL_DONE> if you have verified compilation and testing success.
+
 Please review the task and uncommitted changes, and make sure the task is complete, and done to satisfaction.
 DO NOT trust the developer's notes, always review the code and build/test results yourself.
 Look for typical 'cheating' patterns, such as turning off unit tests, taking files
@@ -215,6 +215,14 @@ If the task is complete and we're happy with the code, run a git commit+push.
 If you have any questions of the user for the future, you can add them to QUESTIONS.md.
 If you have any ideas for the future, you can add them to IDEAS.md.
 " | tee >(cat > $LOGFILE-tester)
+
+    # Check if verifier has confirmed all tasks are truly complete
+    set +e
+    if grep -q "<VERIFIED_ALL_DONE>" $LOGFILE-tester; then
+        echo -e "\033[32mAll tasks verified complete by reviewer - project finished!\033[0m"
+        exit 0
+    fi
+    set -e
 
     sleep 1
 done
