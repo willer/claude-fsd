@@ -8,7 +8,14 @@ $(dirname "$0")/claudefsd-check-dependencies
 # Add counter for loop iterations
 LOOP_COUNTER=0
 
+# Failure detection variables
+CONSECUTIVE_FAST_ITERATIONS=0
+MIN_ITERATION_TIME=300  # 5 minutes in seconds
+
 while true; do
+    # Record iteration start time
+    ITERATION_START_TIME=$(date +%s)
+    
     # Increment loop counter
     LOOP_COUNTER=$((LOOP_COUNTER + 1))
     
@@ -232,6 +239,44 @@ If you have any ideas for the future, you can add them to IDEAS.md.
         exit 0
     fi
     set -e
+
+    # Calculate iteration duration and check for failure patterns
+    ITERATION_END_TIME=$(date +%s)
+    ITERATION_DURATION=$((ITERATION_END_TIME - ITERATION_START_TIME))
+    
+    echo -e "\033[36mIteration $LOOP_COUNTER completed in ${ITERATION_DURATION}s\033[0m"
+    
+    # Check if iteration was suspiciously fast (likely failure mode)
+    if [ $ITERATION_DURATION -lt $MIN_ITERATION_TIME ]; then
+        CONSECUTIVE_FAST_ITERATIONS=$((CONSECUTIVE_FAST_ITERATIONS + 1))
+        echo -e "\033[33mWarning: Fast iteration detected (${ITERATION_DURATION}s < ${MIN_ITERATION_TIME}s threshold)\033[0m"
+        echo -e "\033[33mConsecutive fast iterations: $CONSECUTIVE_FAST_ITERATIONS/3\033[0m"
+        
+        # Exit if too many consecutive fast iterations (likely Claude API failure)
+        if [ $CONSECUTIVE_FAST_ITERATIONS -ge 3 ]; then
+            echo -e "\033[31m==================================================================\033[0m"
+            echo -e "\033[31m== FAILURE MODE DETECTED - THROTTLING ACTIVATED\033[0m"
+            echo -e "\033[31m==================================================================\033[0m"
+            echo -e "\033[31mDetected 3 consecutive iterations under ${MIN_ITERATION_TIME}s each.\033[0m"
+            echo -e "\033[31mThis usually indicates Claude API issues (token limits, etc).\033[0m"
+            echo -e "\033[31m\033[0m"
+            echo -e "\033[31mSuggested actions:\033[0m"
+            echo -e "\033[31m- Check your Claude API token limits\033[0m"
+            echo -e "\033[31m- Wait a few minutes and restart with: claude-fsd dev\033[0m"
+            echo -e "\033[31m- Review logs in: logs/\033[0m"
+            echo -e "\033[31m==================================================================\033[0m"
+            exit 1
+        fi
+        
+        # Add exponential backoff delay for fast iterations
+        BACKOFF_DELAY=$((CONSECUTIVE_FAST_ITERATIONS * 60))  # 1min, 2min, 3min
+        echo -e "\033[33mApplying backoff delay: ${BACKOFF_DELAY}s\033[0m"
+        sleep $BACKOFF_DELAY
+    else
+        # Reset counter on successful iteration
+        CONSECUTIVE_FAST_ITERATIONS=0
+        echo -e "\033[32mNormal iteration timing - continuing...\033[0m"
+    fi
 
     sleep 1
 done

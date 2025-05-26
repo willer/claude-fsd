@@ -1,19 +1,28 @@
 # claude-fsd
 
-Claude Full Self Drive (FSD) - Your AI-powered development team on autopilot.
+Automated project development - let AI build your project while you sleep.
 
 ## What is this?
 
-Remember when junior developers were going to be replaced by AI? Well, the tables have turned. As explained in the excellent article ["Revenge of the Junior Developer"](https://sourcegraph.com/blog/revenge-of-the-junior-developer), AI has actually made junior developers more powerful than ever.
+claude-fsd is an automated development system that runs continuous development cycles without constant supervision. Write a brief description of what you want, answer some clarifying questions, then let it build your project autonomously.
 
-This tool takes that concept to the next level by creating an entire **agent fleet** - multiple AI agents working together like a development team:
+Think of it like **Tesla FSD for code** - it handles the driving, but you should keep an eye on it and occasionally take the wheel when needed.
+
+### How the Agent System Works
+
+The system operates with multiple specialized AI agents working together:
 
 - 🧑‍💻 **Developer Agent**: Writes code, implements features, fixes bugs
-- 📋 **Planner Agent**: Breaks down tasks, manages the development roadmap
+- 📋 **Planner Agent**: Breaks down tasks, manages the development roadmap  
 - 👀 **Reviewer Agent**: Reviews code quality, catches issues, ensures best practices
 - 🧪 **Tester Agent**: Runs tests, validates changes, commits clean code
 
-Think of it as having a full development team on autopilot - like Tesla's Full Self-Driving, but for code! The AI agents work in cycles, planning tasks, implementing them, reviewing the work, and then moving on to the next task, with minimal human intervention.
+The agents work in continuous cycles:
+```
+Plan → Develop → Review → Test → Commit → Repeat
+```
+
+You can leave it running while you grab lunch or sleep - it just keeps going until it thinks the project is complete.
 
 ## Installation
 
@@ -23,12 +32,15 @@ npm install -g claude-fsd
 
 ## Quick Start
 
-Just run:
 ```bash
-claude-fsd    # or claudefsd - both work the same
+claude-fsd
 ```
 
-You'll get an interactive menu to choose what you want to do. It's that simple!
+The system will walk you through the setup process:
+
+1. **Create a BRIEF.md** - Write a short description of what you want to build
+2. **Answer questions in QUESTIONS.md** - The AI will generate clarifying questions for you to answer
+3. **Let it rip** - Start the automated development process
 
 ## Commands
 
@@ -71,17 +83,34 @@ Generates an initial project plan from scratch based on:
 
 ## How it Works
 
-1. **You define what you want** in `BRIEF.md`
-2. **AI analyst creates a series of questions** in `docs/QUESTIONS.md` for you to answer
-3. **You answer the questions in the file**
-4. **AI architect creates detailed notes and plan** in `docs/CLAUDE-NOTES.md` and `docs/PLAN.md`
-5. **The agent fleet executes** the plan task by task
-6. **You review and guide** the process when needed, in a separate `claude` instance, or just by watching the output and reading the files
+1. **Write a BRIEF.md** - Describe what you want to build
+2. **Answer AI-generated questions** in `QUESTIONS.md` 
+3. **Start the development loop** - The system automatically:
+   - Picks the next task from your plan
+   - Implements the feature
+   - Reviews the code
+   - Runs tests and commits changes
+   - Repeats until complete
 
-The agents work in a continuous loop:
-```
-Plan → Develop → Review → Test → Commit → Repeat
-```
+## Monitoring Progress (Like Tesla FSD)
+
+This isn't sci-fi level "sleep through the entire project" automation - it's more like Tesla FSD. The system handles most of the work, but you should monitor it and be ready to intervene when needed.
+
+**Recommended monitoring approach:**
+- **Run a parallel Claude session** - Open another Claude window/tab to chat about the project
+- **Check status periodically** - Ask the parallel Claude: "What's the current status of my project?"
+- **Review the plan** - Look at `docs/PLAN.md` to see what's been completed and what's next
+- **Watch for drift** - If the system goes off track, intervene before it gets too far
+
+**When you need to course-correct:**
+- **Update the plan** - Add urgent fixes or redirections to the top of `docs/PLAN.md`
+- **Direct intervention** - Use your parallel Claude session to directly fix issues
+- **The system adapts** - claude-fsd will pick up plan changes on the next loop iteration
+
+**Interruptible design:**
+- Hit Ctrl+C anytime to pause
+- Restart later with `claude-fsd dev`
+- Perfect for running overnight, during meetings, or while getting lunch
 
 ## Requirements
 
@@ -110,11 +139,12 @@ your-project/
 
 ## Tips for Success
 
-1. **Start small** - Break down your project into small, clear tasks
-2. **Be specific** - The clearer your requirements, the better the results
-3. **Review regularly** - Check in on what the agents are doing
-4. **Use version control** - The agents will commit changes, but you should review them
-5. **Trust but verify** - The agents are good but not perfect
+1. **Keep your BRIEF.md concise** - A few clear paragraphs work better than lengthy specifications
+2. **Answer questions thoroughly** - The AI's questions help it understand your exact needs
+3. **Monitor periodically** - Check progress while it runs, especially during initial cycles
+4. **Use the plan as your steering wheel** - Update `docs/PLAN.md` to guide development direction
+5. **Trust the process** - Let it run autonomously, but verify the results
+
 
 ## License
 
