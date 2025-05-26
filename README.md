@@ -71,10 +71,12 @@ Generates an initial project plan from scratch based on:
 
 ## How it Works
 
-1. **You define what you want** in `docs/REQUIREMENTS.md`
-2. **AI creates a plan** breaking it down into manageable tasks
-3. **The agent fleet executes** the plan task by task
-4. **You review and guide** the process when needed
+1. **You define what you want** in `BRIEF.md`
+2. **AI analyst creates a series of questions** in `docs/QUESTIONS.md` for you to answer
+3. **You answer the questions in the file**
+4. **AI architect creates a detailed plan** in `docs/PLAN.md`
+5. **The agent fleet executes** the plan task by task
+6. **You review and guide** the process when needed, in a separate `claude` instance, or just by watching the output and reading the files
 
 The agents work in a continuous loop:
 ```
