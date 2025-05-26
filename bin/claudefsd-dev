@@ -125,6 +125,8 @@ Important guidelines to follow:
 - Maintain web tests in a WEBTESTS.md file if applicable
 - Add lint/architecture/static code analysis tests as you go
 - Run cheap and easy tests (lint, architecture, unit) frequently during development
+- Please stay on the current git branch if it's a feature branch; don't make new ones and especially don't switch out of it
+- If you need basic SDLC protections, just ensure pre-commit hooks are set up, but avoid adding extensive CI/CD infrastructure
 
 Remember, your work will be reviewed before being committed to the repository. Ensure your changes are well-documented and adhere to the project's standards and best practices.
 
@@ -163,6 +165,9 @@ DO NOT trust the developer's notes, always review the code and build/test result
 Look for typical 'cheating' patterns, such as turning off unit tests, taking files
 out of the compilation configuration, and redefining the plan to skip tasks
 that aren't working.
+
+Also note: please avoid switching git branches - stay on the current branch, as
+long as it's a proper feature branch.
 
 If the task is not complete, adjust the item in docs/PLAN.md with suggestions for 
 the developer to complete the task properly.
@@ -206,6 +211,9 @@ Look for typical 'cheating' patterns, such as turning off unit tests, taking fil
 out of the compilation configuration, and redefining the plan to skip tasks
 that aren't working.
 If there's a linter defined for this project, run it.
+
+Also note: please avoid switching git branches - stay on the current branch, as
+long as it's a proper feature branch.
 
 If the task is not complete, adjust the item in docs/PLAN.md with suggestions for 
 the developer to complete the task properly.

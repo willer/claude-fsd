@@ -65,7 +65,7 @@ Interactive planning session where you work with AI to:
 
 #### claudefsd-plan-gen
 Generates an initial project plan from scratch based on:
-- Your project requirements (`docs/REQUIREMENTS.md`)
+- Your project brief (`BRIEF.md`)
 - Any existing code or documentation
 - Best practices for your tech stack
 
@@ -74,7 +74,7 @@ Generates an initial project plan from scratch based on:
 1. **You define what you want** in `BRIEF.md`
 2. **AI analyst creates a series of questions** in `docs/QUESTIONS.md` for you to answer
 3. **You answer the questions in the file**
-4. **AI architect creates a detailed plan** in `docs/PLAN.md`
+4. **AI architect creates detailed notes and plan** in `docs/CLAUDE-NOTES.md` and `docs/PLAN.md`
 5. **The agent fleet executes** the plan task by task
 6. **You review and guide** the process when needed, in a separate `claude` instance, or just by watching the output and reading the files
 
@@ -101,7 +101,7 @@ Your project should have:
 your-project/
 ├── docs/
 │   ├── PLAN.md          # The development plan (tasks to do)
-│   ├── REQUIREMENTS.md  # What you want built
+│   ├── CLAUDE-NOTES.md  # AI architect's analysis and notes
 │   ├── QUESTIONS.md     # Questions for clarification
 │   └── IDEAS.md         # Future ideas and improvements
 ├── logs/                # Logs from each AI session
