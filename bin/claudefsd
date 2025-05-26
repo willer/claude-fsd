@@ -130,6 +130,24 @@ open_with_editor() {
 # Check dependencies first
 check_dependencies
 
+# Function to check for updates (non-blocking)
+check_for_updates() {
+    # Only check if we can reach npm registry quickly
+    if timeout 2 npm view claude-fsd version >/dev/null 2>&1; then
+        local current_version=$(npm list -g claude-fsd --depth=0 2>/dev/null | grep claude-fsd | sed 's/.*@//')
+        local latest_version=$(timeout 2 npm view claude-fsd version 2>/dev/null)
+        
+        if [ -n "$current_version" ] && [ -n "$latest_version" ] && [ "$current_version" != "$latest_version" ]; then
+            echo -e "${YELLOW}📦 Update available: claude-fsd $current_version → $latest_version${NC}"
+            echo -e "${YELLOW}   Run: npm update -g claude-fsd${NC}"
+            echo
+        fi
+    fi
+}
+
+# Check for updates (quick, non-blocking)
+check_for_updates
+
 # If no arguments provided, show interactive menu
 if [ $# -eq 0 ]; then
     show_menu

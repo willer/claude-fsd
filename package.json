@@ -23,7 +23,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/claude-fsd.git"
+    "url": "git+https://github.com/willer/claude-fsd.git"
   },
   "engines": {
     "node": ">=14.0.0"
