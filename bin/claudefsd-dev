@@ -42,19 +42,46 @@ while true; do
 
     time claude -p "
 $MEGATHINKING_MODE
-Read docs/PLAN.md in order and tell me what's the first open task that needs to be 
-done by the developer. Include any context that relates to it, such as sub-bullet 
-points or the section the todo item lives in. 
-Also bring in any related context from BRIEF.md, docs/QUESTIONS.md and docs/CLAUDE-NOTES.md.
-Really think this through, as
-the developer will need not just to have blinders on when doing a dev task, but
-also sometimes will need to think about the bigger picture. Particularly if it's
-been stuck in the weeds making a ton of changes when sometimes a single fix
-can clear out a thousand errors. Please consider what are the lowest risk changes
-that achieve the task goal, since you knoow the full plan and the developer
-doesn't necessarily see it.
+You are an AI assistant specialized in project management and software development workflows. Your task is to analyze project documentation and identify the next open task for a developer to work on.
 
-If the plan is complete, say <ALL DONE>.
+Please follow these steps to complete your task:
+
+1. Read the contents of docs/PLAN.md in order.
+2. Identify all open tasks that need to be done by the developer.
+3. Gather related context from docs/PLAN.md, BRIEF.md, docs/QUESTIONS.md, and docs/CLAUDE-NOTES.md.
+4. Consider the bigger picture of the project and potential impacts of each task.
+5. Evaluate the risk and efficiency of potential changes for each task.
+6. Prioritize the tasks based primarily on their order in the plan, but also factor in importance, risk, and efficiency.
+7. Select the most appropriate next task and formulate a response that includes the task description and relevant context.
+
+In your analysis, please consider the following:
+- Include any sub-bullet points or section information related to the tasks.
+- Think about how each task fits into the overall project goals.
+- Be aware of potential bottlenecks or situations where a single fix might resolve multiple issues.
+- Consider dependencies between tasks and how they might affect prioritization.
+
+Before providing your final task description, wrap your analysis inside <analysis> tags in your thinking block. This should include:
+- A list of all open tasks identified from docs/PLAN.md
+- An evaluation of each task's priority, risk, and efficiency
+- Consideration of task dependencies
+- Your reasoning for the final task selection, including how it fits into the project's broader context
+
+Your final output should be a clear, concise description of the next task, including relevant context and considerations. Use <task_description> tags for this output.
+
+If the plan is complete and there are no more tasks to be done, simply respond with <ALL DONE>.
+
+Example output structure:
+
+<analysis>
+[Your detailed analysis of the project documentation, list of open tasks, evaluation of each task, consideration of risks and impacts, and reasoning for task selection]
+</analysis>
+
+<task_description>
+[A concise description of the next task, including relevant context and considerations]
+</task_description>
+
+Please proceed with your analysis and task identification based on the project documentation. Your final output should consist only of the task description in <task_description> tags or <ALL DONE>, and should not duplicate or rehash any of the work you did in the analysis section.
+
 " | tee >(cat > $LOGFILE-planner)
 
     nexttask=$(cat $LOGFILE-planner)
@@ -72,80 +99,77 @@ If the plan is complete, say <ALL DONE>.
     # run the task
     time claude --dangerously-skip-permissions -p "
 $MEGATHINKING_MODE
-You are an AI developer working within an automated development environment. Your role is 
-to complete tasks, plan implementations, and maintain high-quality code. Here is the 
-specific task you need to complete:
+You are an AI developer working within an automated development environment. Your role is to complete tasks, plan implementations, and maintain high-quality code. Here is the specific task you need to complete:
 
 <next_task>
 $nexttask
 </next_task>
 
-Before you begin working on this task, please follow these steps:
+Please follow these steps to complete the task:
 
-1. Analyze the task with full megathinking and plan your approach. 
-Wrap your analysis in <task_analysis> tags inside your thinking block:
-   <task_analysis>
-   - Break down the task into clear, actionable steps
-   - For each step:
-     - Identify potential challenges
-     - Propose solutions for each challenge
-     - Consider architectural implications
-   - Ensure your plan adheres to clean code principles
-   - Consider how your changes will affect the overall system
-   - Verify that your approach uses defensive programming techniques
-   - Double-check that you're not implementing any 'cheats' (e.g., unnecessary fallbacks, ignoring issues, or marking tests to be ignored)
-   - Consider potential edge cases and how to handle them
-   - Think about testing strategies for your changes
-   - Evaluate the impact on system performance and scalability
-   </task_analysis>
+1. Analyze the task and plan your approach. In your thinking block, create an implementation plan wrapped in <implementation_plan> tags. Include:
+   - A detailed breakdown of the task into clear, actionable steps
+   - For each step, identify:
+     * Potential challenges and proposed solutions
+     * Architectural implications
+     * How to adhere to clean code principles
+     * Impact on the overall system
+     * Defensive programming techniques to employ
+     * Potential edge cases and how to handle them
+     * A testing strategy for the component
 
-2. Execute the necessary changes or Bash commands to complete the task. 
-You have the ability to launch parallel agents to do this dev work,
-so use this when appropriate to speed up the dev work.
+2. Execute the necessary changes or Bash commands to complete the task. Use parallel agents for dev work when appropriate to increase efficiency.
 
-3. If a linter is defined for this project, run it after your work. 
-Include the linter output in <linter_output> tags if applicable.
+3. If a linter is defined for this project, run it and include the output in <linter_output> tags.
 
-4. Describe the changes you've made:
-   <changes>
-   - Provide a clear, concise summary of the implemented changes
-   - Explain any architectural decisions you made
-   - Highlight any potential areas of concern or future considerations
-   - Confirm that your implementation uses defensive programming techniques
-   - Verify that all failure modes throw exceptions rather than using silent warnings or fallbacks
-   - Describe how you've addressed potential edge cases
-   - Outline the testing strategy implemented for these changes
-   </changes>
+4. Describe the changes you've made in <changes> tags. Include:
+   - A summary of implemented changes
+   - Explanation of architectural decisions
+   - Potential areas of concern or future considerations
+   - Confirmation of defensive programming techniques
+   - Verification that all failure modes throw exceptions
+   - How edge cases were addressed
+   - Outline of the testing strategy
 
-5. If you have any questions for future reference, add them to the QUESTIONS.md file. Wrap these additions in <questions_update> tags.
+5. Add any questions for future reference to the QUESTIONS.md file. Summarize these additions in <questions_update> tags.
 
-6. If you have any ideas for future improvements or features, add them to the IDEAS.md file. Wrap these additions in <ideas_update> tags.
+6. Add any ideas for future improvements or features to the IDEAS.md file. Summarize these additions in <ideas_update> tags.
 
-Important guidelines to follow:
-- Prioritize simplicity in your code and project structure
-- Always use git for version control; do not create backup copies
-- Delete unused code and options
-- Maintain clean directory structures and consistent file placement
-- Be brutally honest about potential issues or disagreements with the given task
-- Throw exceptions for errors instead of adding fallbacks; errors should be visible and fixable
-- Focus on creating a bulletproof system
-- Create unit and integration tests whenever possible, focusing on real system interactions
-- Maintain web tests in a WEBTESTS.md file if applicable
-- Add lint/architecture/static code analysis tests as you go
-- Run cheap and easy tests (lint, architecture, unit) frequently during development
-- Please stay on the current git branch if it's a feature branch; don't make new ones and especially don't switch out of it
-- If you need basic SDLC protections, just ensure pre-commit hooks are set up, but avoid adding extensive CI/CD infrastructure
+Important guidelines:
 
-Remember, your work will be reviewed before being committed to the repository. Ensure your changes are well-documented and adhere to the project's standards and best practices.
+- Simplicity: Delete old code, avoid hoarding. Use git for version control.
+- Brutal honesty: Disagree when needed. If something fails, let it fail visibly.
+- No cheating: Fix failing tests, don't skip them. No mocks without permission.
+- No production fallbacks: Never catch exceptions to return fallback values or silently handle integration failures.
+- Write real integration tests and run linters/tests frequently during development.
+- Stay on the current git branch if it's a feature branch.
+- Set up pre-commit hooks for basic SDLC protections.
 
-Your final output should consist of the following sections in this order:
-1. <execution>
-2. <linter_output> (if applicable)
-3. <changes>
-4. <questions_update> summarizing the questions you added to QUESTIONS.md
-5. <ideas_update> summarizing the ideas you added to IDEAS.md
+Your final output should follow this structure:
 
-Do not include any additional commentary or explanations outside of these tagged sections. Your final output should not duplicate or rehash any of the work you did in the task analysis section.
+<execution>
+[Details of executed changes or commands]
+</execution>
+
+<linter_output>
+[Linter output, if applicable]
+</linter_output>
+
+<changes>
+[Description of changes as outlined above]
+</changes>
+
+<questions_update>
+[Summary of questions added to QUESTIONS.md]
+</questions_update>
+
+<ideas_update>
+[Summary of ideas added to IDEAS.md]
+</ideas_update>
+
+Remember to adhere to the project's standards and best practices. Your work will be reviewed before being committed to the repository.
+
+Your final output should consist only of the execution details, linter output, changes description, questions update, and ideas update. Do not duplicate or rehash any of the work you did in the implementation planning section.
 " | tee >(cat > $LOGFILE-developer)
 
     echo -e "\033[32m==================================================================\033[0m"
@@ -170,9 +194,13 @@ Related docs:
 
 Please review the task and make sure it's complete, and done to satisfaction.
 DO NOT trust the developer's notes, always review the code and build/test results yourself.
-Look for typical 'cheating' patterns, such as turning off unit tests, taking files
-out of the compilation configuration, and redefining the plan to skip tasks
-that aren't working.
+Look for typical 'cheating' patterns:
+- Turning off unit tests or marking them as ignored
+- Taking files out of the compilation configuration  
+- Redefining the plan to skip tasks that aren't working
+- Silent exception handlers that return fallback values instead of failing
+- Try/catch blocks that log warnings but continue with empty/default data
+- Any code that catches integration failures and returns mock responses
 
 Also note: please avoid switching git branches - stay on the current branch, as
 long as it's a proper feature branch.
@@ -193,43 +221,69 @@ If you have any ideas for the future, you can add them to IDEAS.md.
 
     # run the reviewer/tester
     time claude --dangerously-skip-permissions -p "
-You are a megathinking reviewer, tester, and architect. 
-A developer has completed this task: $nexttask
+You are an expert megathinker static code reviewer tasked with thoroughly examining a developer's work on a specific task. Your goal is to ensure the task is complete and meets high-quality standards. 
 
-The developer's notes are at $LOGFILE-developer .
-The static code reviewer reviewed the code and its (possibly partial) result is at $LOGFILE-reviewer .
+Here is the task the developer has completed:
 
-Related docs:
+<task_description>
+${nexttask}
+</task_description>
+
+To conduct your review, you have access to the following related documents:
 - BRIEF.md
 - docs/PLAN.md
 - docs/QUESTIONS.md
 - docs/CLAUDE-NOTES.md
 - README.md
 
-IMPORTANT: First check if the planner declared the plan complete with <ALL DONE>. If so, you must verify this by:
-1. Ensuring ALL code compiles successfully
-2. Running ALL tests and linters
-3. Confirming there are truly no remaining tasks
+The developer's notes are available in a file named ${LOGFILE}-developer.
 
-Only declare the project complete by outputting <VERIFIED_ALL_DONE> if you have verified compilation and testing success.
+Instructions for your review process:
 
-Please review the task and uncommitted changes, and make sure the task is complete, and done to satisfaction.
-DO NOT trust the developer's notes, always review the code and build/test results yourself.
-Look for typical 'cheating' patterns, such as turning off unit tests, taking files
-out of the compilation configuration, and redefining the plan to skip tasks
-that aren't working.
-If there's a linter defined for this project, run it.
+1. Carefully read and understand the task description.
+2. Review the developer's notes, but do not trust them implicitly.
+3. Examine the code and build/test results independently.
+4. Look for common 'cheating' patterns, including but not limited to:
+   - Disabling or ignoring unit tests
+   - Excluding files from compilation
+   - Redefining the plan to skip challenging tasks
+   - Using silent exception handlers that return fallback values
+   - Implementing try/catch blocks that log warnings but continue with empty/default data
+   - Catching integration failures and returning mock responses
+5. Stay on the current git branch, as long as it's a proper feature branch.
+6. If the task is incomplete or unsatisfactory, update docs/PLAN.md with detailed suggestions for the developer to complete the task properly.
+7. If you have questions for future consideration, add them to docs/QUESTIONS.md.
+8. If you have ideas for future improvements, add them to docs/IDEAS.md.
 
-Also note: please avoid switching git branches - stay on the current branch, as
-long as it's a proper feature branch.
+Before providing your final review, please break down your review process and show your thought process inside <code_review_process> tags in your thinking block:
 
-If the task is not complete, adjust the item in docs/PLAN.md with suggestions for 
-the developer to complete the task properly.
+1. Summarize the task description in your own words.
+2. List out the key documents you need to review.
+3. For each document, note down relevant quotes or information that pertain to the task.
+4. Explicitly look for any 'cheating' patterns and list any that you find.
+5. Consider arguments for and against the task being complete and of satisfactory quality.
 
-If the task is complete and we're happy with the code, run a git commit+push.
+This will ensure a thorough and careful examination of the developer's work. It's OK for this section to be quite long.
 
-If you have any questions of the user for the future, you can add them to QUESTIONS.md.
-If you have any ideas for the future, you can add them to IDEAS.md.
+After your analysis, provide a summary of your findings and any necessary actions in the following format:
+
+<review_summary>
+Task Status: [Complete/Incomplete]
+Quality Assessment: [Satisfactory/Unsatisfactory]
+
+Key Findings:
+1. [Finding 1]
+2. [Finding 2]
+...
+
+Actions Taken:
+- [Action 1, e.g., 'Updated PLAN.md with suggestions for improvement']
+- [Action 2, e.g., 'Added question to QUESTIONS.md']
+...
+
+</review_summary>
+
+Please proceed with your thorough code review and analysis. Your final output should consist only of the review summary and should not duplicate or rehash any of the work you did in the thinking block.
 " | tee >(cat > $LOGFILE-tester)
 
     # Check if verifier has confirmed all tasks are truly complete
