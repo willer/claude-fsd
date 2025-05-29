@@ -56,8 +56,8 @@ DO NOT answer the questions yourself - just generate them for the user to answer
 "
 
 # run BA's
-echo "Running claude..."
-claude --dangerously-skip-permissions -p "$prompt1" | tee >(cat > $LOGFILE-ba1)
+echo "Running claude with opus model..."
+claude --model opus --dangerously-skip-permissions -p "$prompt1" | tee >(cat > $LOGFILE-ba1)
 
 # Only run codex if available
 if command -v codex >/dev/null 2>&1; then

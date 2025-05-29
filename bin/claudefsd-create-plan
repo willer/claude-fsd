@@ -61,15 +61,15 @@ Use feature branches for development work. Follow YAGNI principle - don't over-e
 "
 
 # run BA's
-echo "Running claude..."
-claude --dangerously-skip-permissions -p "$prompt2" | tee >(cat > $LOGFILE-ba3-$round)
+echo "Running claude with opus model..."
+claude --model opus --dangerously-skip-permissions -p "$prompt2" | tee >(cat > $LOGFILE-ba3)
 
 # Only run codex if available
 if command -v codex >/dev/null 2>&1; then
     echo "Running codex o3 (results won't display)..."
-    codex -m o3 --full-auto -q "$prompt2" > $LOGFILE-ba4-$round
+    codex -m o3 --full-auto -q "$prompt2" > $LOGFILE-ba4
 else
-    echo "Codex not available, skipping o3 analysis" > $LOGFILE-ba4-$round
+    echo "Codex not available, skipping o3 analysis" > $LOGFILE-ba4
 fi
 
 echo -e "\033[32m==================================================================\033[0m"

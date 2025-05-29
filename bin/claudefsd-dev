@@ -36,11 +36,13 @@ while true; do
         echo -e "\033[33m**** MEGATHINKING MODE ACTIVATED ****\033[0m"
         echo -e "\033[33mThis is your 4th development cycle. Taking a step back for architectural planning.\033[0m"
         MEGATHINKING_MODE="**** MEGATHINKING MODE ACTIVATED ****\nThis is your 4th development cycle. Before proceeding with the next task, please take a step back and use megathinking mode to architecturally plan the next phase of development. Consider the overall structure of the codebase, potential refactoring opportunities, design patterns, technical debt, and how the current work connects to broader project goals.\n\n"
+        CLAUDE_MODEL="opus"
     else
         MEGATHINKING_MODE=""
+        CLAUDE_MODEL="sonnet"
     fi
 
-    time claude -p "
+    time claude --model $CLAUDE_MODEL -p "
 $MEGATHINKING_MODE
 You are an AI assistant specialized in project management and software development workflows. Your task is to analyze project documentation and identify the next open task for a developer to work on.
 
@@ -97,7 +99,7 @@ Please proceed with your analysis and task identification based on the project d
     fi
 
     # run the task
-    time claude --dangerously-skip-permissions -p "
+    time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "
 $MEGATHINKING_MODE
 You are an AI developer working within an automated development environment. Your role is to complete tasks, plan implementations, and maintain high-quality code. Here is the specific task you need to complete:
 
@@ -220,7 +222,7 @@ If you have any ideas for the future, you can add them to IDEAS.md.
     echo -e "\033[32m==================================================================\033[0m"
 
     # run the reviewer/tester
-    time claude --dangerously-skip-permissions -p "
+    time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "
 You are an expert megathinker static code reviewer tasked with thoroughly examining a developer's work on a specific task. Your goal is to ensure the task is complete and meets high-quality standards. 
 
 Here is the task the developer has completed:

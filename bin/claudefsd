@@ -162,16 +162,20 @@ if [ $# -eq 0 ]; then
                 echo
                 echo "# Project Brief" > BRIEF.md
                 echo "" >> BRIEF.md
-                echo "## Overview" >> BRIEF.md
-                echo "Describe your project here..." >> BRIEF.md
+                echo "## Vision" >> BRIEF.md
+                echo "Describe the big picture vision and what you want to achieve..." >> BRIEF.md
                 echo "" >> BRIEF.md
-                echo "## Goals" >> BRIEF.md
-                echo "- Goal 1" >> BRIEF.md
-                echo "- Goal 2" >> BRIEF.md
+                echo "## Core Requirements" >> BRIEF.md
+                echo "- Core requirement 1" >> BRIEF.md
+                echo "- Core requirement 2" >> BRIEF.md
                 echo "" >> BRIEF.md
-                echo "## Requirements" >> BRIEF.md
-                echo "- Requirement 1" >> BRIEF.md
-                echo "- Requirement 2" >> BRIEF.md
+                echo "## Key Features" >> BRIEF.md
+                echo "- Feature 1" >> BRIEF.md
+                echo "- Feature 2" >> BRIEF.md
+                echo "" >> BRIEF.md
+                echo "## Success Criteria" >> BRIEF.md
+                echo "- Success criterion 1" >> BRIEF.md
+                echo "- Success criterion 2" >> BRIEF.md
                 
                 open_with_editor "BRIEF.md"
                 echo
