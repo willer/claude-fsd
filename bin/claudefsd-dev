@@ -207,6 +207,8 @@ Look for typical 'cheating' patterns:
 Also note: please avoid switching git branches - stay on the current branch, as
 long as it's a proper feature branch.
 
+If the task is complete, or there are a lot of pending changes, do a git commit.
+
 If the task is not complete, adjust the item in docs/PLAN.md with suggestions for 
 the developer to complete the task properly.
 
