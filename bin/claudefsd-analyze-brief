@@ -37,7 +37,7 @@ Read all of these documents if they exist:
 - docs/WEBTESTS.md -- the project web tests
 - README.md -- the project README
 
-Your job, as a megathinking business analyst, is to analyze the project brief and generate clarifying questions.
+Your job, as a megathinker business analyst, is to analyze the project brief and generate clarifying questions.
 
 1. Read through the BRIEF.md and any existing documents to understand the project.
 2. Generate 10-15 relevant questions to clarify ambiguous aspects of the brief.
@@ -64,6 +64,7 @@ if command -v codex >/dev/null 2>&1; then
     echo "Running codex o3 (results won't display)..."
     codex -m o3 --full-auto -q "$prompt1" > $LOGFILE-ba2
 else
+    echo "Warning: codex not found, skipping enhanced analysis"
     echo "Codex not available, skipping o3 analysis" > $LOGFILE-ba2
 fi
 

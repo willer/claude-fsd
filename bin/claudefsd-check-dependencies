@@ -25,7 +25,6 @@ check_dependencies() {
     # Check for codex (optional but recommended)
     if [ "$check_codex" = true ] && ! command_exists codex; then
         warnings+=("codex is not installed. Some review features will be unavailable.")
-        warnings+=("Install it from: https://github.com/Codex-ai/codex")
     fi
     
     # Check for OPENAI_API_KEY (optional for codex)

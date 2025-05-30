@@ -118,7 +118,7 @@ Please follow these steps to complete the task:
      * Impact on the overall system
      * Defensive programming techniques to employ
      * Potential edge cases and how to handle them
-     * A testing strategy for the component
+     * A minimal, focused testing strategy (avoid extensive test infrastructure)
 
 2. Execute the necessary changes or Bash commands to complete the task. Use parallel agents for dev work when appropriate to increase efficiency.
 
@@ -216,6 +216,7 @@ If you have any questions of the user for the future, you can add them to QUESTI
 If you have any ideas for the future, you can add them to IDEAS.md.
 " > $LOGFILE-reviewer) &
     else
+        echo "Warning: codex not found, skipping background code review"
         echo "Codex not available, skipping static code review" > $LOGFILE-reviewer
     fi
 

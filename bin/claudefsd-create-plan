@@ -53,11 +53,18 @@ The CLAUDE-NOTES.md should contain:
 The PLAN.md should contain:
 - Ordered list of development tasks with [ ] checkboxes
 - Each task should be specific and actionable
-- Include infrastructure setup (git, linting, testing) as early tasks
+- Include proportional infrastructure setup (basic linting + pre-commit hooks)
 - Group related tasks into logical phases
 
-Ensure the plan includes basic SDLC infrastructure like git repo setup, pre-commit hooks, and linting.
-Use feature branches for development work. Follow YAGNI principle - don't over-engineer.
+INFRASTRUCTURE PROPORTIONALITY RULES:
+- Basic linter + pre-commit hooks: Always include for any project
+- Tests: Should be ≤50% the size of functional code (not 3x larger!)
+- For simple shell scripts (~200-500 lines): Basic integration tests only
+- For complex systems (>1000 lines): More comprehensive testing
+- NO enterprise patterns for simple solutions (file locking, complex CI, monolithic architectures)
+- Follow existing claude-fsd pattern: separate focused scripts, not monoliths
+- FAIL LOUD - simple error handling, exit on failure
+- Choose infrastructure complexity appropriate to solution size
 "
 
 # run BA's
@@ -69,6 +76,7 @@ if command -v codex >/dev/null 2>&1; then
     echo "Running codex o3 (results won't display)..."
     codex -m o3 --full-auto -q "$prompt2" > $LOGFILE-ba4
 else
+    echo "Warning: codex not found, skipping enhanced planning"
     echo "Codex not available, skipping o3 analysis" > $LOGFILE-ba4
 fi
 
