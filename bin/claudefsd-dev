@@ -246,15 +246,16 @@ The developer's notes are available in a file named ${LOGFILE}-developer.
 Instructions for your review process:
 
 1. Carefully read and understand the task description.
-2. Review the developer's notes, but do not trust them implicitly.
+2. Review the developer's notes, but do not trust them implicitly; verify them where possible.
 3. Examine the code and build/test results independently.
-4. Look for common 'cheating' patterns, including but not limited to:
+4. Look for common cheating or misunderstanding patterns, including but not limited to:
    - Disabling or ignoring unit tests
    - Excluding files from compilation
    - Redefining the plan to skip challenging tasks
    - Using silent exception handlers that return fallback values
    - Implementing try/catch blocks that log warnings but continue with empty/default data
    - Catching integration failures and returning mock responses
+   - Build behaves differently for verifier than developer; this may come from them each running different scripts for compiling and running tests
 5. Stay on the current git branch, as long as it's a proper feature branch.
 6. If the task is incomplete or unsatisfactory, update docs/PLAN.md with detailed suggestions for the developer to complete the task properly.
 7. If you have questions for future consideration, add them to docs/QUESTIONS.md.
