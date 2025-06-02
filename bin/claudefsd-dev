@@ -107,6 +107,11 @@ You are an AI developer working within an automated development environment. You
 $nexttask
 </next_task>
 
+IMPORTANT: Before starting the task, you MUST read and understand:
+1. The project's CLAUDE.md file (if it exists) - this contains project-specific instructions
+2. The user's global CLAUDE.md file at ~/.claude/CLAUDE.md (if it exists) - this contains general development principles
+3. Ensure all your work follows the architectural and development guidelines from both files
+
 Please follow these steps to complete the task:
 
 1. Analyze the task and plan your approach. In your thinking block, create an implementation plan wrapped in <implementation_plan> tags. Include:
@@ -234,6 +239,11 @@ Here is the task the developer has completed:
 ${nexttask}
 </task_description>
 
+IMPORTANT: Before starting your review, you MUST read and understand:
+1. The project's CLAUDE.md file (if it exists) - this contains project-specific instructions
+2. The user's global CLAUDE.md file at ~/.claude/CLAUDE.md (if it exists) - this contains general development principles
+3. Verify that all recent changes comply with the architectural and development guidelines from both files
+
 To conduct your review, you have access to the following related documents:
 - BRIEF.md
 - docs/PLAN.md
@@ -248,7 +258,12 @@ Instructions for your review process:
 1. Carefully read and understand the task description.
 2. Review the developer's notes, but do not trust them implicitly; verify them where possible.
 3. Examine the code and build/test results independently.
-4. Look for common cheating or misunderstanding patterns, including but not limited to:
+4. Verify compliance with CLAUDE.md guidelines (both project and user files), paying special attention to:
+   - Simplicity and clean code principles
+   - No cheating patterns or production fallbacks
+   - Proper error handling (fail fast, no silent failures)
+   - Following architectural conventions
+5. Look for common cheating or misunderstanding patterns, including but not limited to:
    - Disabling or ignoring unit tests
    - Excluding files from compilation
    - Redefining the plan to skip challenging tasks
@@ -256,18 +271,20 @@ Instructions for your review process:
    - Implementing try/catch blocks that log warnings but continue with empty/default data
    - Catching integration failures and returning mock responses
    - Build behaves differently for verifier than developer; this may come from them each running different scripts for compiling and running tests
-5. Stay on the current git branch, as long as it's a proper feature branch.
-6. If the task is incomplete or unsatisfactory, update docs/PLAN.md with detailed suggestions for the developer to complete the task properly.
-7. If you have questions for future consideration, add them to docs/QUESTIONS.md.
-8. If you have ideas for future improvements, add them to docs/IDEAS.md.
+   - Committing with --no-verify to turn off the pre-commit checks; the checks may need to change to be more flexible, upon careful thinking, but they shouldn't just be turned off
+6. Stay on the current git branch, as long as it's a proper feature branch.
+7. If the task is incomplete or unsatisfactory, update docs/PLAN.md with detailed suggestions for the developer to complete the task properly.
+8. If you have questions for future consideration, add them to docs/QUESTIONS.md.
+9. If you have ideas for future improvements, add them to docs/IDEAS.md.
 
 Before providing your final review, please break down your review process and show your thought process inside <code_review_process> tags in your thinking block:
 
 1. Summarize the task description in your own words.
 2. List out the key documents you need to review.
 3. For each document, note down relevant quotes or information that pertain to the task.
-4. Explicitly look for any 'cheating' patterns and list any that you find.
-5. Consider arguments for and against the task being complete and of satisfactory quality.
+4. Check CLAUDE.md compliance - list specific guidelines that apply to this task and verify adherence.
+5. Explicitly look for any 'cheating' patterns and list any that you find.
+6. Consider arguments for and against the task being complete and of satisfactory quality.
 
 This will ensure a thorough and careful examination of the developer's work. It's OK for this section to be quite long.
 
