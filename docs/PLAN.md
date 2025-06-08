@@ -7,8 +7,15 @@
 - [ ] Update bin/claudefsd-dev to implement the developer step:
   - Parse implementation plan, execute changes, run linter/tests, and log results (see prompt specification in logs).
 - [ ] Update bin/claudefsd-dev to implement the reviewer/tester step:
-  - Run static code review, enforce fail-fast behavior, and commit changes on success (see prompt spec in logs).
-- [ ] Add pre-commit hooks for linting and testing to enforce code quality standards.
+  - Run static code review to validate the developer's output for:
+    * No bypass of tests or content policy (`--dangerously-skip-permissions` must not be used)
+    * No silent exception handlers or fallback values
+    * No disabled or ignored tests
+    * No removed or modified documentation files (`BRIEF.md`, `docs/PLAN.md`, etc.)
+    * No exclusions from compilation or build configuration
+  - Enforce fail-fast behavior on review failures (exit non-zero and abort)
+  - Commit changes only after full verification (see prompt spec in logs).
+- [ ] Add pre-commit hooks for linting, testing, and to disallow `--dangerously-skip-permissions` flags in scripts.
 - [ ] Validate the end-to-end flow by running integration tests and manual test scenarios (see test-manual.md).
 
 # Notes:

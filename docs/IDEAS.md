@@ -1,4 +1,4 @@
-# Future Ideas
+# Ideas
 
-- Consider adding automated linting and testing stages into the development loop for immediate feedback on code quality.
-- Support local integration test harness to allow offline development without exhausting external API limits.
+- Enforce a pre-commit hook to disallow `--dangerously-skip-permissions` flags in scripts.
+- Add automated tests to verify that documentation files (`BRIEF.md`, `docs/PLAN.md`, etc.) exist and include required sections before running tasks.
