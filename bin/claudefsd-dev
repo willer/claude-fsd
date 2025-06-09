@@ -42,7 +42,8 @@ while true; do
         CLAUDE_MODEL="sonnet"
     fi
 
-    time claude --model $CLAUDE_MODEL -p "
+    # Define the planner prompt
+    PLANNER_PROMPT="
 $MEGATHINKING_MODE
 You are an AI assistant specialized in project management and software development workflows. Your task is to analyze project documentation and identify the next open task for a developer to work on.
 
@@ -84,7 +85,17 @@ Example output structure:
 
 Please proceed with your analysis and task identification based on the project documentation. Your final output should consist only of the task description in <task_description> tags or <ALL DONE>, and should not duplicate or rehash any of the work you did in the analysis section.
 
-" | tee >(cat > $LOGFILE-planner)
+"
+
+    # Save the prompt to the log file first
+    echo "=== PROMPT ===" > $LOGFILE-planner
+    echo "$PLANNER_PROMPT" >> $LOGFILE-planner
+    echo "=== END PROMPT ===" >> $LOGFILE-planner
+    echo "" >> $LOGFILE-planner
+    echo "=== OUTPUT ===" >> $LOGFILE-planner
+
+    # Run claude and append output to the log file
+    time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "$PLANNER_PROMPT" 2>&1 | tee -a $LOGFILE-planner
 
     nexttask=$(cat $LOGFILE-planner)
 
@@ -98,8 +109,8 @@ Please proceed with your analysis and task identification based on the project d
         echo -e "\033[33mThis is your 4th development cycle. Taking a step back for architectural planning.\033[0m"
     fi
 
-    # run the task
-    time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "
+    # Define the developer prompt
+    DEVELOPER_PROMPT="
 $MEGATHINKING_MODE
 You are an AI developer working within an automated development environment. Your role is to complete tasks, plan implementations, and maintain high-quality code. Here is the specific task you need to complete:
 
@@ -177,7 +188,17 @@ Your final output should follow this structure:
 Remember to adhere to the project's standards and best practices. Your work will be reviewed before being committed to the repository.
 
 Your final output should consist only of the execution details, linter output, changes description, questions update, and ideas update. Do not duplicate or rehash any of the work you did in the implementation planning section.
-" | tee >(cat > $LOGFILE-developer)
+"
+
+    # Save the prompt to the log file first
+    echo "=== PROMPT ===" > $LOGFILE-developer
+    echo "$DEVELOPER_PROMPT" >> $LOGFILE-developer
+    echo "=== END PROMPT ===" >> $LOGFILE-developer
+    echo "" >> $LOGFILE-developer
+    echo "=== OUTPUT ===" >> $LOGFILE-developer
+
+    # Run claude and append output to the log file
+    time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "$DEVELOPER_PROMPT" | tee -a $LOGFILE-developer
 
     echo -e "\033[32m==================================================================\033[0m"
     echo -e "\033[32m== REVIEWING WORK (backgrounded)\033[0m"
@@ -229,8 +250,8 @@ If you have any ideas for the future, you can add them to IDEAS.md.
     echo -e "\033[32m== REVIEWING/TESTING/COMMITTING WORK\033[0m"
     echo -e "\033[32m==================================================================\033[0m"
 
-    # run the reviewer/tester
-    time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "
+    # Define the reviewer/tester prompt
+    REVIEWER_PROMPT="
 You are an expert megathinker static code reviewer tasked with thoroughly examining a developer's work on a specific task. Your goal is to ensure the task is complete and meets high-quality standards. 
 
 Here is the task the developer has completed:
@@ -307,7 +328,17 @@ Actions Taken:
 </review_summary>
 
 Please proceed with your thorough code review and analysis. Your final output should consist only of the review summary and should not duplicate or rehash any of the work you did in the thinking block.
-" | tee >(cat > $LOGFILE-tester)
+"
+
+    # Save the prompt to the log file first
+    echo "=== PROMPT ===" > $LOGFILE-tester
+    echo "$REVIEWER_PROMPT" >> $LOGFILE-tester
+    echo "=== END PROMPT ===" >> $LOGFILE-tester
+    echo "" >> $LOGFILE-tester
+    echo "=== OUTPUT ===" >> $LOGFILE-tester
+
+    # Run claude and append output to the log file
+    time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "$REVIEWER_PROMPT" | tee -a $LOGFILE-tester
 
     # Check if verifier has confirmed all tasks are truly complete
     set +e
