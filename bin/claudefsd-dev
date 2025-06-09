@@ -112,6 +112,8 @@ Please proceed with your analysis and task identification based on the project d
     # Define the developer prompt
     DEVELOPER_PROMPT="
 $MEGATHINKING_MODE
+**ULTRA-THINKING DIRECTIVE**: Before beginning, engage in extended deep thinking about the task implications, architectural considerations, and optimal approach. This is a potentially \$1M+ scale project that demands exceptional thoroughness.
+
 You are an AI developer working within an automated development environment. Your role is to complete tasks, plan implementations, and maintain high-quality code. Here is the specific task you need to complete:
 
 <next_task>
@@ -125,8 +127,9 @@ IMPORTANT: Before starting the task, you MUST read and understand:
 
 Please follow these steps to complete the task:
 
-1. Analyze the task and plan your approach. In your thinking block, create an implementation plan wrapped in <implementation_plan> tags. Include:
+1. **DEEP TASK ANALYSIS**: Analyze the task and plan your approach. In your thinking block, create an implementation plan wrapped in <implementation_plan> tags. Include:
    - A detailed breakdown of the task into clear, actionable steps
+   - Whether this task would benefit from parallel agent decomposition
    - For each step, identify:
      * Potential challenges and proposed solutions
      * Architectural implications
@@ -136,11 +139,21 @@ Please follow these steps to complete the task:
      * Potential edge cases and how to handle them
      * A minimal, focused testing strategy (avoid extensive test infrastructure)
 
-2. Execute the necessary changes or Bash commands to complete the task. Use parallel agents for dev work when appropriate to increase efficiency.
+2. **EXECUTION STRATEGY**: Choose between:
+   - **Single Agent Deep Work**: For focused sequential tasks requiring deep thinking
+   - **Parallel Agent Coordination**: For multi-faceted tasks that can be decomposed
+   
+   If choosing parallel agents, use the Task tool to spawn focused sub-agents:
+   - Core implementation agent
+   - Test coverage agent  
+   - Error handling agent
+   - Documentation agent
 
-3. If a linter is defined for this project, run it and include the output in <linter_output> tags.
+3. Execute the necessary changes or Bash commands to complete the task. Use parallel agents for dev work when appropriate to increase efficiency.
 
-4. Describe the changes you've made in <changes> tags. Include:
+4. If a linter is defined for this project, run it and include the output in <linter_output> tags.
+
+5. Describe the changes you've made in <changes> tags. Include:
    - A summary of implemented changes
    - Explanation of architectural decisions
    - Potential areas of concern or future considerations
@@ -149,9 +162,9 @@ Please follow these steps to complete the task:
    - How edge cases were addressed
    - Outline of the testing strategy
 
-5. Add any questions for future reference to the QUESTIONS.md file. Summarize these additions in <questions_update> tags.
+6. Add any questions for future reference to the QUESTIONS.md file. Summarize these additions in <questions_update> tags.
 
-6. Add any ideas for future improvements or features to the IDEAS.md file. Summarize these additions in <ideas_update> tags.
+7. Add any ideas for future improvements or features to the IDEAS.md file. Summarize these additions in <ideas_update> tags.
 
 Important guidelines:
 
