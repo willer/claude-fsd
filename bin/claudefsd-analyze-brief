@@ -1,9 +1,7 @@
 #!/bin/bash
 
-set -e
-
-# Check dependencies
-$(dirname "$0")/claudefsd-check-dependencies
+# Use the persona-based version for better question generation
+exec "$(dirname "$0")/claudefsd-analyze-brief-personas" "$@"
 
 mkdir -p logs
 

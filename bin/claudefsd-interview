@@ -1,0 +1,508 @@
+#!/bin/bash
+
+set -e
+
+# Check dependencies
+$(dirname "$0")/claudefsd-check-dependencies
+
+# Get the actual location of this script (resolving symlinks)
+if command -v realpath >/dev/null 2>&1; then
+    SCRIPT_PATH="$(realpath "$0")"
+elif command -v readlink >/dev/null 2>&1; then
+    # macOS doesn't have realpath by default, but has readlink
+    SCRIPT_PATH="$0"
+    while [ -L "$SCRIPT_PATH" ]; do
+        SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    done
+    SCRIPT_PATH="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)/$(basename "$SCRIPT_PATH")"
+else
+    # Fallback if neither command is available
+    SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+fi
+
+# Get the directory containing the script and its parent (package root)
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROMPTS_DIR="$PROJECT_ROOT/prompts"
+
+# Verify prompts directory exists
+if [ ! -d "$PROMPTS_DIR" ]; then
+    echo -e "${RED}Error: Could not locate prompts directory at $PROMPTS_DIR${NC}"
+    exit 1
+fi
+
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Create necessary directories
+mkdir -p docs
+mkdir -p logs
+# prompts directory is part of the package, no need to create
+mkdir -p tmp
+
+# Session file paths
+SESSION_FILE="docs/INTERVIEW-SESSION.json"
+QUESTIONS_FILE="docs/QUESTIONS.md"
+REQUIREMENTS_FILE="docs/REQUIREMENTS.md"
+QUESTION_CACHE="tmp/next_question.txt"
+PERSONA_CACHE="tmp/next_persona.txt"
+
+# Check for BRIEF.md
+if [ ! -f BRIEF.md ]; then
+    echo -e "${RED}No BRIEF.md file found. Please create one first.${NC}"
+    exit 1
+fi
+
+# Function to initialize session
+init_session() {
+    local session_id="interview_$(date +%Y%m%d_%H%M%S)"
+    cat > "$SESSION_FILE" <<EOF
+{
+  "session_id": "$session_id",
+  "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "last_updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "status": "in_progress",
+  "question_count": {
+    "total": 0,
+    "by_persona": {
+      "DBA": 0,
+      "TECHNICAL_ARCHITECT": 0,
+      "UX_EXPERT": 0,
+      "SOFTWARE_ENGINEER": 0,
+      "FRONTEND_DEVELOPER": 0,
+      "DEVOPS_ENGINEER": 0,
+      "SECURITY_EXPERT": 0
+    }
+  },
+  "current_question": null
+}
+EOF
+    
+    # Initialize QUESTIONS.md
+    echo "# Project Interview Questions and Answers" > "$QUESTIONS_FILE"
+    echo "" >> "$QUESTIONS_FILE"
+    echo "## Interview Session: $session_id" >> "$QUESTIONS_FILE"
+    echo "" >> "$QUESTIONS_FILE"
+    
+    echo -e "${GREEN}New interview session started: $session_id${NC}"
+}
+
+# Function to load session
+load_session() {
+    if [ -f "$SESSION_FILE" ]; then
+        # Check if session is complete
+        local status=$(jq -r '.status' "$SESSION_FILE")
+        if [ "$status" = "complete" ]; then
+            echo -e "${YELLOW}Previous interview session is complete.${NC}"
+            read -p "Start a new interview? (y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                init_session
+            else
+                echo "Exiting."
+                exit 0
+            fi
+        else
+            echo -e "${BLUE}Resuming existing interview session...${NC}"
+            local session_id=$(jq -r '.session_id' "$SESSION_FILE")
+            local total_questions=$(jq -r '.question_count.total' "$SESSION_FILE")
+            echo -e "${BLUE}Session: $session_id | Questions asked: $total_questions${NC}"
+        fi
+    else
+        init_session
+    fi
+}
+
+# Function to update session
+update_session() {
+    local persona="$1"
+    local question="$2"
+    
+    # Validate persona
+    if [ -z "$persona" ]; then
+        echo -e "${RED}Error: Empty persona in update_session${NC}"
+        return 1
+    fi
+    
+    # Update counts
+    local total=$(jq -r '.question_count.total' "$SESSION_FILE")
+    local persona_count=$(jq -r ".question_count.by_persona.$persona" "$SESSION_FILE" 2>/dev/null || echo "0")
+    
+    total=$((total + 1))
+    persona_count=$((persona_count + 1))
+    
+    # Update session file
+    jq ".question_count.total = $total | \
+        .question_count.by_persona.$persona = $persona_count | \
+        .last_updated = \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" | \
+        .current_question = {\"persona\": \"$persona\", \"question\": \"$question\", \"asked_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" \
+        "$SESSION_FILE" > "$SESSION_FILE.tmp" && mv "$SESSION_FILE.tmp" "$SESSION_FILE"
+}
+
+# Background function to prepare next question
+prepare_next_question_bg() {
+    local brief_content=$(cat BRIEF.md)
+    local all_qa=$(tail -n +4 "$QUESTIONS_FILE" 2>/dev/null || echo "No questions asked yet.")
+    local recent_qa=$(tail -n 20 "$QUESTIONS_FILE" 2>/dev/null || echo "No questions asked yet.")
+    
+    # Get counts
+    local total=$(jq -r '.question_count.total' "$SESSION_FILE")
+    local dba_count=$(jq -r '.question_count.by_persona.DBA' "$SESSION_FILE")
+    local ta_count=$(jq -r '.question_count.by_persona.TECHNICAL_ARCHITECT' "$SESSION_FILE")
+    local ux_count=$(jq -r '.question_count.by_persona.UX_EXPERT' "$SESSION_FILE")
+    local se_count=$(jq -r '.question_count.by_persona.SOFTWARE_ENGINEER' "$SESSION_FILE")
+    local frontend_count=$(jq -r '.question_count.by_persona.FRONTEND_DEVELOPER' "$SESSION_FILE")
+    local devops_count=$(jq -r '.question_count.by_persona.DEVOPS_ENGINEER' "$SESSION_FILE")
+    local security_count=$(jq -r '.question_count.by_persona.SECURITY_EXPERT' "$SESSION_FILE")
+    
+    # Create Q&A summary by domain
+    local qa_summary="Data: $dba_count questions | Architecture: $ta_count questions | UX: $ux_count questions | Backend: $se_count questions | Frontend: $frontend_count questions | DevOps: $devops_count questions | Security: $security_count questions"
+    
+    # Read coordinator prompt
+    local coordinator_prompt=$(cat "$PROMPTS_DIR/interview_coordinator.txt")
+    
+    # Replace tokens
+    coordinator_prompt="${coordinator_prompt//\{brief_content\}/$brief_content}"
+    coordinator_prompt="${coordinator_prompt//\{total_questions\}/$total}"
+    coordinator_prompt="${coordinator_prompt//\{dba_count\}/$dba_count}"
+    coordinator_prompt="${coordinator_prompt//\{ta_count\}/$ta_count}"
+    coordinator_prompt="${coordinator_prompt//\{ux_count\}/$ux_count}"
+    coordinator_prompt="${coordinator_prompt//\{se_count\}/$se_count}"
+    coordinator_prompt="${coordinator_prompt//\{frontend_count\}/$frontend_count}"
+    coordinator_prompt="${coordinator_prompt//\{devops_count\}/$devops_count}"
+    coordinator_prompt="${coordinator_prompt//\{security_count\}/$security_count}"
+    coordinator_prompt="${coordinator_prompt//\{recent_qa_history\}/$recent_qa}"
+    coordinator_prompt="${coordinator_prompt//\{qa_summary_by_domain\}/$qa_summary}"
+    
+    # Get coordinator decision
+    local next_persona=$(claude --model sonnet -p "$coordinator_prompt" 2>/dev/null | tail -1)
+    
+    # Validate and clean decision - remove spaces, newlines, and markdown formatting
+    next_persona=$(echo "$next_persona" | tr -d ' \n\r' | sed 's/[*_`]//g')
+    
+    # Also handle cases where it might be prefixed with ** or __
+    next_persona="${next_persona#**}"
+    next_persona="${next_persona%**}"
+    next_persona="${next_persona#__}"
+    next_persona="${next_persona%__}"
+    
+    # Normalize persona names (handle cases with/without underscores)
+    # Use tr for uppercase conversion (portable across bash versions)
+    next_persona_upper=$(echo "$next_persona" | tr '[:lower:]' '[:upper:]')
+    case "$next_persona_upper" in
+        DBA|DATABASE_ADMINISTRATOR)
+            next_persona="DBA"
+            ;;
+        TECHNICAL_ARCHITECT|TECHNICALARCHITECT|TA)
+            next_persona="TECHNICAL_ARCHITECT"
+            ;;
+        UX_EXPERT|UXEXPERT|UX)
+            next_persona="UX_EXPERT"
+            ;;
+        SOFTWARE_ENGINEER|SOFTWAREENGINEER|SE)
+            next_persona="SOFTWARE_ENGINEER"
+            ;;
+        FRONTEND_DEVELOPER|FRONTENDDEVELOPER|FE)
+            next_persona="FRONTEND_DEVELOPER"
+            ;;
+        DEVOPS_ENGINEER|DEVOPSENGINEER|DEVOPS)
+            next_persona="DEVOPS_ENGINEER"
+            ;;
+        SECURITY_EXPERT|SECURITYEXPERT|SECURITY)
+            next_persona="SECURITY_EXPERT"
+            ;;
+        COMPLETE|DONE|FINISHED)
+            next_persona="COMPLETE"
+            ;;
+        *)
+            echo "Warning: Invalid coordinator decision '$next_persona', using SOFTWARE_ENGINEER" >&2
+            next_persona="SOFTWARE_ENGINEER"
+            ;;
+    esac
+    
+    echo "$next_persona" > "$PERSONA_CACHE"
+    
+    # If not complete, get the question
+    if [ "$next_persona" != "COMPLETE" ]; then
+        # Get persona-specific history
+        local persona_qa=$(grep -A1 "\[$next_persona\]:" "$QUESTIONS_FILE" 2>/dev/null || echo "No previous questions from this persona.")
+        
+        # Select appropriate prompt file
+        local prompt_file=""
+        case $next_persona in
+            DBA)
+                prompt_file="$PROMPTS_DIR/interview_dba_adapted.txt"
+                ;;
+            TECHNICAL_ARCHITECT)
+                prompt_file="$PROMPTS_DIR/interview_technical_architect.txt"
+                ;;
+            UX_EXPERT)
+                prompt_file="$PROMPTS_DIR/interview_ux_expert.txt"
+                ;;
+            SOFTWARE_ENGINEER)
+                prompt_file="$PROMPTS_DIR/interview_software_engineer.txt"
+                ;;
+            FRONTEND_DEVELOPER)
+                prompt_file="$PROMPTS_DIR/interview_frontend_developer.txt"
+                ;;
+            DEVOPS_ENGINEER)
+                prompt_file="$PROMPTS_DIR/interview_devops_engineer.txt"
+                ;;
+            SECURITY_EXPERT)
+                prompt_file="$PROMPTS_DIR/interview_security_expert.txt"
+                ;;
+        esac
+        
+        if [ -f "$prompt_file" ]; then
+            # Gather all existing project documents
+            local existing_docs=""
+            if [ -f "docs/PLAN.md" ]; then
+                existing_docs="${existing_docs}$(printf '=== EXISTING PLAN ===\n')$(cat docs/PLAN.md)$(printf '\n\n')"
+            fi
+            if [ -f "docs/REQUIREMENTS.md" ]; then
+                existing_docs="${existing_docs}$(printf '=== EXISTING REQUIREMENTS ===\n')$(cat docs/REQUIREMENTS.md)$(printf '\n\n')"
+            fi
+            if [ -f "docs/CLAUDE-NOTES.md" ]; then
+                existing_docs="${existing_docs}$(printf '=== EXISTING TECHNICAL NOTES ===\n')$(cat docs/CLAUDE-NOTES.md)$(printf '\n\n')"
+            fi
+            if [ -f "README.md" ]; then
+                existing_docs="${existing_docs}$(printf '=== README ===\n')$(cat README.md)$(printf '\n\n')"
+            fi
+            
+            # Read prompt template
+            local prompt_template=$(cat "$prompt_file")
+            
+            # Add existing docs context if any exist
+            if [ -n "$existing_docs" ]; then
+                prompt_template="$(printf 'EXISTING PROJECT DOCUMENTATION:\n')${existing_docs}$(printf '\n')${prompt_template}"
+            fi
+            
+            # Replace tokens
+            prompt_template="${prompt_template//\{brief_content\}/$brief_content}"
+            prompt_template="${prompt_template//\{all_qa_history\}/$all_qa}"
+            prompt_template="${prompt_template//\{dba_qa_history\}/$persona_qa}"
+            prompt_template="${prompt_template//\{ta_qa_history\}/$persona_qa}"
+            prompt_template="${prompt_template//\{ux_qa_history\}/$persona_qa}"
+            prompt_template="${prompt_template//\{se_qa_history\}/$persona_qa}"
+            prompt_template="${prompt_template//\{frontend_qa_history\}/$persona_qa}"
+            prompt_template="${prompt_template//\{devops_qa_history\}/$persona_qa}"
+            prompt_template="${prompt_template//\{security_qa_history\}/$persona_qa}"
+            
+            # Get question from Claude
+            local question=$(claude --model sonnet -p "$prompt_template" 2>/dev/null | tail -1)
+            echo "$question" > "$QUESTION_CACHE"
+            
+            # Question is ready in cache, no output needed
+        fi
+    fi
+}
+
+# Function to save Q&A
+save_qa() {
+    local persona="$1"
+    local question="$2"
+    local answer="$3"
+    local q_num=$(jq -r '.question_count.total' "$SESSION_FILE")
+    
+    echo "" >> "$QUESTIONS_FILE"
+    echo "### Q$q_num [$persona]: $question" >> "$QUESTIONS_FILE"
+    echo "**Answer**: $answer" >> "$QUESTIONS_FILE"
+}
+
+# Function to display progress
+show_progress() {
+    echo ""
+    echo -e "${BLUE}=== Interview Progress ===${NC}"
+    
+    local total=$(jq -r '.question_count.total' "$SESSION_FILE")
+    echo -e "Total questions: ${GREEN}$total${NC}"
+    
+    echo -e "\nQuestions by expert:"
+    echo -e "  Database Admin:      $(jq -r '.question_count.by_persona.DBA' "$SESSION_FILE")"
+    echo -e "  Technical Architect: $(jq -r '.question_count.by_persona.TECHNICAL_ARCHITECT' "$SESSION_FILE")"
+    echo -e "  UX Expert:          $(jq -r '.question_count.by_persona.UX_EXPERT' "$SESSION_FILE")"
+    echo -e "  Software Engineer:   $(jq -r '.question_count.by_persona.SOFTWARE_ENGINEER' "$SESSION_FILE")"
+    echo -e "  Frontend Developer:  $(jq -r '.question_count.by_persona.FRONTEND_DEVELOPER' "$SESSION_FILE")"
+    echo -e "  DevOps Engineer:    $(jq -r '.question_count.by_persona.DEVOPS_ENGINEER' "$SESSION_FILE")"
+    echo -e "  Security Expert:    $(jq -r '.question_count.by_persona.SECURITY_EXPERT' "$SESSION_FILE")"
+    
+    echo ""
+    if [ $total -lt 10 ]; then
+        echo -e "${YELLOW}Minimum recommended: 10-15 questions${NC}"
+    elif [ $total -gt 25 ]; then
+        echo -e "${YELLOW}Consider wrapping up - you have plenty of information!${NC}"
+    else
+        echo -e "${GREEN}Good progress - keep going or type 'done' when ready${NC}"
+    fi
+    echo ""
+}
+
+# Function to consolidate requirements
+consolidate_requirements() {
+    echo -e "\n${GREEN}Consolidating requirements...${NC}"
+    
+    local consolidation_prompt="
+You are a technical writer consolidating interview responses into a comprehensive requirements document.
+
+=== PROJECT BRIEF ===
+$(cat BRIEF.md)
+
+=== INTERVIEW Q&A ===
+$(cat "$QUESTIONS_FILE")
+
+=== INSTRUCTIONS ===
+Create a comprehensive requirements document that:
+1. Organizes all requirements by category (functional, technical, operational, etc.)
+2. Removes redundancy while preserving all important details
+3. Clarifies any ambiguities found in the Q&A
+4. Highlights key decisions and constraints
+5. Identifies any gaps that may need addressing
+
+Format the output as a clean, well-structured markdown document suitable for feeding into project planning.
+"
+    
+    claude --model opus -p "$consolidation_prompt" > "$REQUIREMENTS_FILE"
+    
+    echo -e "${GREEN}Requirements consolidated in $REQUIREMENTS_FILE${NC}"
+    
+    # Mark session as complete
+    jq '.status = "complete"' "$SESSION_FILE" > "$SESSION_FILE.tmp" && mv "$SESSION_FILE.tmp" "$SESSION_FILE"
+}
+
+# Main interview loop
+main() {
+    echo -e "${GREEN}🎙️  Claude FSD Interactive Interview System${NC}"
+    echo -e "${GREEN}======================================================${NC}"
+    echo ""
+    
+    # Load or init session
+    load_session
+    
+    echo -e "\n${YELLOW}Instructions:${NC}"
+    echo "- Answer each question concisely (1-2 sentences recommended)"
+    echo "- The next question is prepared while you answer (faster!)"
+    echo "- Your progress is automatically saved"
+    echo ""
+    echo -e "${YELLOW}To finish the interview:${NC}"
+    echo "  • Type 'done' or 'exit' and press Enter"
+    echo "  • Press Ctrl+D (EOF)"
+    echo "  • Press Ctrl+C to cancel without saving"
+    echo ""
+    
+    # Show current progress
+    show_progress
+    
+    # Background process PID
+    bg_pid=""
+    first_question=true
+    
+    # Main loop
+    while true; do
+        # Only wait for background if there's one running and we have no cached question
+        if [ -n "$bg_pid" ] && [ ! -f "$QUESTION_CACHE" ]; then
+            if [ "$first_question" = "true" ]; then
+                echo -e "${BLUE}Preparing first question...${NC}"
+            fi
+            wait $bg_pid 2>/dev/null || true
+            bg_pid=""
+        fi
+        
+        # Start preparing next question in background (for next iteration)
+        if [ ! -f "$QUESTION_CACHE" ]; then
+            prepare_next_question_bg &
+            bg_pid=$!
+            wait $bg_pid  # Must wait if we don't have a question yet
+        fi
+        
+        # Read cached persona and question
+        local next_persona=$(cat "$PERSONA_CACHE" 2>/dev/null || echo "SOFTWARE_ENGINEER")
+        
+        # Check if complete
+        if [ "$next_persona" = "COMPLETE" ]; then
+            echo -e "\n${GREEN}The coordinator believes we have sufficient information!${NC}"
+            read -p "Would you like to conclude the interview? (y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                consolidate_requirements
+                break
+            else
+                echo "Continuing with more questions..."
+                next_persona="SOFTWARE_ENGINEER"
+                echo "$next_persona" > "$PERSONA_CACHE"
+            fi
+        fi
+        
+        # Read the prepared question
+        local question=$(cat "$QUESTION_CACHE" 2>/dev/null || echo "What are the main goals of this project?")
+        
+        # Update session with current question
+        update_session "$next_persona" "$question"
+        
+        # Display question
+        echo -e "\n${GREEN}[$next_persona]${NC} $question"
+        
+        # Clear cache files for next iteration
+        rm -f "$PERSONA_CACHE" "$QUESTION_CACHE"
+        
+        # Start preparing next question immediately in background
+        prepare_next_question_bg &
+        bg_pid=$!
+        first_question=false
+        
+        # Get answer
+        echo -e "${YELLOW}Your answer (or 'done' to finish):${NC}"
+        echo -n "> "
+        if ! read -r answer; then
+            # EOF detected (Ctrl+D)
+            # Kill background process
+            [ -n "$bg_pid" ] && kill $bg_pid 2>/dev/null || true
+            return 1
+        fi
+        
+        # Check for exit commands
+        if [[ "$answer" =~ ^(done|exit|quit)$ ]]; then
+            echo -e "\n${YELLOW}Interview concluded by user.${NC}"
+            # Kill background process
+            [ -n "$bg_pid" ] && kill $bg_pid 2>/dev/null || true
+            consolidate_requirements
+            break
+        fi
+        
+        # Save Q&A
+        save_qa "$next_persona" "$question" "$answer"
+        
+        # Show progress periodically
+        local total=$(jq -r '.question_count.total' "$SESSION_FILE")
+        if [ $((total % 5)) -eq 0 ]; then
+            show_progress
+        fi
+    done
+    
+    # Clean up background process
+    [ -n "$bg_pid" ] && kill $bg_pid 2>/dev/null || true
+    
+    echo -e "\n${GREEN}Interview complete!${NC}"
+    echo "- Questions saved in: $QUESTIONS_FILE"
+    echo "- Requirements saved in: $REQUIREMENTS_FILE"
+    echo "- Next step: Run 'claudefsd' to create project plan"
+}
+
+# Handle Ctrl+C as hard stop
+trap 'echo -e "\n${RED}Interview cancelled.${NC}"; [ -n "$bg_pid" ] && kill $bg_pid 2>/dev/null || true; exit 1' INT
+
+# Clean up cache files on exit
+trap 'rm -f "$PERSONA_CACHE" "$QUESTION_CACHE"' EXIT
+
+# Run main function and handle EOF
+if main; then
+    exit 0
+else
+    # If main returns false (EOF detected), consolidate and exit
+    echo -e "\n${YELLOW}Interview ended.${NC}"
+    consolidate_requirements
+    exit 0
+fi

@@ -17,32 +17,36 @@ if [ ! -f BRIEF.md ]; then
     exit 1
 fi
 
-if [ ! -f docs/QUESTIONS.md ]; then
-    echo "No docs/QUESTIONS.md file found. Please run 'claudefsd analyze-brief' first to generate questions."
+if [ ! -f docs/QUESTIONS.md ] && [ ! -f docs/REQUIREMENTS.md ]; then
+    echo "No docs/QUESTIONS.md or docs/REQUIREMENTS.md found."
+    echo "Please run either:"
+    echo "  - 'claudefsd analyze-brief' to generate questions, or"
+    echo "  - 'claudefsd interview' to conduct an interactive interview"
     exit 1
 fi
 
 LOGFILE="logs/claude-$(date +%Y%m%d_%H%M%S).txt"
 
 echo -e "\033[32m==================================================================\033[0m"
-echo -e "\033[32m== CREATING PLAN FROM ANSWERED QUESTIONS\033[0m"
+echo -e "\033[32m== CREATING PLAN FROM PROJECT INPUTS\033[0m"
 echo -e "\033[32m==================================================================\033[0m"
 
     prompt2="
 Read all of these documents if they exist:
 - BRIEF.md -- the project brief
+- docs/QUESTIONS.md -- the project questions (with answers) from analyze-brief or interview
+- docs/REQUIREMENTS.md -- consolidated requirements from interview process
 - docs/CLAUDE-NOTES.md -- AI's working notes and understanding
 - docs/PLAN.md -- the project plan
-- docs/QUESTIONS.md -- the project questions (with answers)
 - docs/IDEAS.md -- the backlog of future ideas
 - docs/WEBTESTS.md -- the project web tests
 - README.md -- the project README
 
 Your job, as a megathinking architect and project manager, is to create the project plan and working notes.
 
-1. Read through the BRIEF.md and the answered questions in docs/QUESTIONS.md.
+1. Read through the BRIEF.md and any available requirements/questions (docs/QUESTIONS.md and/or docs/REQUIREMENTS.md).
 2. Update or create docs/CLAUDE-NOTES.md with your interpretation and understanding of the project.
-3. Update or create docs/PLAN.md with a detailed implementation plan based on the brief and answered questions.
+3. Update or create docs/PLAN.md with a detailed implementation plan based on all available inputs.
 
 The CLAUDE-NOTES.md should contain:
 - Your understanding of the project goals and requirements
@@ -73,11 +77,64 @@ claude --model opus --dangerously-skip-permissions -p "$prompt2" | tee >(cat > $
 
 # Only run codex if available
 if command -v codex >/dev/null 2>&1; then
-    echo "Running codex o3 (results won't display)..."
-    codex -m o3 --full-auto -q "$prompt2" > $LOGFILE-ba4
+    echo ""
+    echo -e "\033[33m==================================================================\033[0m"
+    echo -e "\033[33m== RUNNING O3-PRO FOR DEEP STRATEGIC PLANNING\033[0m"
+    echo -e "\033[33m==================================================================\033[0m"
+    echo "⏳ This will take several minutes as o3-pro deeply analyzes the project..."
+    echo "   o3-pro excels at strategic thinking and will create a comprehensive plan."
+    echo ""
+    
+    # Prepare comprehensive context for o3-pro
+    o3_prompt="You are an elite software architect and strategic planner using o3-pro's advanced reasoning capabilities.
+
+CONTEXT DOCUMENTS:
+$([ -f BRIEF.md ] && echo "=== PROJECT BRIEF ===" && cat BRIEF.md && echo "")
+$([ -f docs/QUESTIONS.md ] && echo "=== QUESTIONS & ANSWERS ===" && cat docs/QUESTIONS.md && echo "")
+$([ -f docs/REQUIREMENTS.md ] && echo "=== CONSOLIDATED REQUIREMENTS ===" && cat docs/REQUIREMENTS.md && echo "")
+$([ -f docs/INTERVIEW-SESSION.json ] && echo "=== INTERVIEW METADATA ===" && cat docs/INTERVIEW-SESSION.json && echo "")
+$([ -f docs/CLAUDE-NOTES.md ] && echo "=== EXISTING NOTES ===" && cat docs/CLAUDE-NOTES.md && echo "")
+$([ -f docs/IDEAS.md ] && echo "=== IDEAS BACKLOG ===" && cat docs/IDEAS.md && echo "")
+$([ -f README.md ] && echo "=== README ===" && cat README.md && echo "")
+
+TASK:
+Using your deep strategic reasoning, create a comprehensive project architecture and implementation plan.
+
+1. ARCHITECTURAL ANALYSIS (docs/CLAUDE-NOTES.md):
+   - System architecture and key design decisions
+   - Technology stack justification
+   - Critical technical challenges and mitigation strategies
+   - Integration points and dependencies
+   - Performance and scalability considerations
+   - Security architecture
+   - Long-term maintainability strategy
+
+2. IMPLEMENTATION PLAN (docs/PLAN.md):
+   - Phased development approach with clear milestones
+   - Detailed task breakdown with dependencies
+   - Risk assessment for each phase
+   - Testing strategy integrated into each phase
+   - Infrastructure needs (proportional to project size)
+   - Performance benchmarks and acceptance criteria
+
+Remember:
+- Think strategically about the entire system lifecycle
+- Consider edge cases and failure modes
+- Plan for iterative development and feedback loops
+- Keep infrastructure proportional to project complexity
+- Prioritize robustness and maintainability
+
+Take your time to think deeply about the optimal approach."
+
+    echo "Running codex o3-pro (this may take 3-5 minutes)..."
+    codex -m o3-pro --full-auto -q "$o3_prompt" | tee $LOGFILE-ba4
+    echo ""
+    echo "✅ o3-pro strategic planning complete!"
 else
-    echo "Warning: codex not found, skipping enhanced planning"
-    echo "Codex not available, skipping o3 analysis" > $LOGFILE-ba4
+    echo ""
+    echo -e "\033[33mNote: Install 'codex' CLI to enable o3-pro strategic planning for enhanced results.\033[0m"
+    echo "Proceeding with standard planning using Claude Opus..."
+    echo "Codex not available, skipping o3-pro strategic analysis" > $LOGFILE-ba4
 fi
 
 echo -e "\033[32m==================================================================\033[0m"

@@ -27,12 +27,14 @@ save_editor_preference() {
 get_default_choice() {
     if [ ! -f BRIEF.md ]; then
         echo "0"
-    elif [ ! -f docs/QUESTIONS.md ]; then
-        echo "1"
-    elif [ ! -f docs/PLAN.md ]; then
-        echo "2"
+    elif [ ! -f docs/REQUIREMENTS.md ] && [ ! -f docs/QUESTIONS.md ]; then
+        echo "1"  # Interactive interview (recommended)
+    elif [ -f docs/REQUIREMENTS.md ] && [ ! -f docs/PLAN.md ]; then
+        echo "3"  # Create plan from requirements
+    elif [ -f docs/QUESTIONS.md ] && [ ! -f docs/PLAN.md ]; then
+        echo "3"  # Create plan from questions
     else
-        echo "3"
+        echo "4"  # Development mode
     fi
 }
 
@@ -51,15 +53,46 @@ show_menu() {
     if [ ! -f BRIEF.md ]; then
         echo "  0) Create project brief - Start your project with a BRIEF.md file"
     fi
-    echo "  1) Analyze brief - Generate questions from project brief"
-    echo "  2) Create plan - Generate requirements and plan from answered questions"
-    echo "  3) Development mode - AI agents work on coding tasks"
-    echo "  4) Exit"
+    
+    # Check if we should show new or old interview flow
+    if [ -f docs/INTERVIEW-SESSION.json ]; then
+        local session_status=$(jq -r '.status' docs/INTERVIEW-SESSION.json 2>/dev/null || echo "unknown")
+        if [ "$session_status" = "in_progress" ]; then
+            echo "  1) Interactive interview - Resume existing interview session"
+        else
+            echo "  1) Interactive interview - Gather requirements through expert Q&A"
+        fi
+    else
+        echo "  1) Interactive interview - Gather requirements through expert Q&A [RECOMMENDED]"
+    fi
+    
+    echo "  2) Batch questions - Generate all questions at once (alternative to interview)"
+    
+    # Show create plan option based on what exists
+    if [ -f docs/REQUIREMENTS.md ]; then
+        echo "  3) Create plan - Generate development plan from requirements"
+    elif [ -f docs/QUESTIONS.md ]; then
+        echo "  3) Create plan - Generate plan from answered questions"
+    else
+        echo "  3) [Requires interview or questions first]"
+    fi
+    
+    echo "  4) Development mode - AI agents work on coding tasks"
+    echo "  5) Exit"
     echo
     
     # Show status of required files
     echo "Current status:"
     [ -f BRIEF.md ] && echo "  ✓ BRIEF.md exists" || echo "  ✗ BRIEF.md missing"
+    
+    # Show interview session status if exists
+    if [ -f docs/INTERVIEW-SESSION.json ]; then
+        local session_status=$(jq -r '.status' docs/INTERVIEW-SESSION.json 2>/dev/null || echo "unknown")
+        local total_questions=$(jq -r '.question_count.total' docs/INTERVIEW-SESSION.json 2>/dev/null || echo "0")
+        echo "  📝 Interview session: $session_status ($total_questions questions)"
+    fi
+    
+    [ -f docs/REQUIREMENTS.md ] && echo "  ✓ docs/REQUIREMENTS.md exists" || echo "  ✗ docs/REQUIREMENTS.md missing"
     [ -f docs/QUESTIONS.md ] && echo "  ✓ docs/QUESTIONS.md exists" || echo "  ✗ docs/QUESTIONS.md missing"
     [ -f docs/PLAN.md ] && echo "  ✓ docs/PLAN.md exists" || echo "  ✗ docs/PLAN.md missing"
     echo
@@ -179,42 +212,62 @@ if [ $# -eq 0 ]; then
                 
                 open_with_editor "BRIEF.md"
                 echo
-                echo -e "${GREEN}Brief created! Run claudefsd again to analyze it.${NC}"
+                echo -e "${GREEN}Brief created! Run claudefsd again to start the interview.${NC}"
             else
                 echo -e "${RED}BRIEF.md already exists!${NC}"
                 exit 1
             fi
             ;;
         1)
-            echo -e "${GREEN}Analyzing brief and generating questions...${NC}"
+            # Interactive interview
+            if [ ! -f BRIEF.md ]; then
+                echo -e "${RED}No BRIEF.md found. Please create a project brief first.${NC}"
+                exit 1
+            fi
+            echo -e "${GREEN}Starting interactive interview...${NC}"
+            echo
+            exec "$(dirname "$0")/claudefsd-interview"
+            ;;
+        2)
+            # Batch questions
+            echo -e "${GREEN}Analyzing brief and generating questions (batch mode)...${NC}"
             echo
             "$(dirname "$0")/claudefsd-analyze-brief"
             
             if [ $? -eq 0 ]; then
                 echo
                 echo -e "${GREEN}Questions generated in docs/QUESTIONS.md${NC}"
-                echo "Please answer the questions before proceeding."
+                echo "Please answer the questions, then run claudefsd again to create the plan."
                 echo
                 
                 open_with_editor "docs/QUESTIONS.md"
                 
                 echo
-                echo -e "${GREEN}Now creating plan from answered questions...${NC}"
-                echo
-                exec "$(dirname "$0")/claudefsd-create-plan"
+                echo -e "${GREEN}Questions saved. After answering them, run 'claudefsd' again and select option 3 to create the plan.${NC}"
             fi
             ;;
-        2)
-            echo -e "${GREEN}Creating plan from answered questions...${NC}"
-            echo
-            exec "$(dirname "$0")/claudefsd-create-plan"
-            ;;
         3)
+            # Create plan - check what source to use
+            if [ -f docs/REQUIREMENTS.md ]; then
+                echo -e "${GREEN}Creating plan from requirements...${NC}"
+                echo
+                # Use requirements-based planning
+                exec "$(dirname "$0")/claudefsd-create-plan-from-requirements"
+            elif [ -f docs/QUESTIONS.md ]; then
+                echo -e "${GREEN}Creating plan from answered questions...${NC}"
+                echo
+                exec "$(dirname "$0")/claudefsd-create-plan"
+            else
+                echo -e "${RED}No requirements or questions found. Please run the interview or generate questions first.${NC}"
+                exit 1
+            fi
+            ;;
+        4)
             echo -e "${GREEN}Starting development mode...${NC}"
             echo
             exec "$(dirname "$0")/claudefsd-dev"
             ;;
-        4)
+        5)
             echo "Goodbye!"
             exit 0
             ;;
@@ -226,7 +279,11 @@ if [ $# -eq 0 ]; then
 else
     # If arguments provided, pass them through to the appropriate command
     case "$1" in
-        dev)
+        interview)
+            shift
+            exec "$(dirname "$0")/claudefsd-interview" "$@"
+            ;;
+        dev|run)
             shift
             exec "$(dirname "$0")/claudefsd-dev" "$@"
             ;;
@@ -244,9 +301,10 @@ else
             echo "Usage: claudefsd [command]"
             echo
             echo "Commands:"
-            echo "  analyze-brief - Analyze brief and generate questions"
-            echo "  create-plan   - Create plan from answered questions"
-            echo "  dev           - Run development mode"
+            echo "  interview     - Interactive requirements gathering"
+            echo "  analyze-brief - Analyze brief and generate questions (legacy)"
+            echo "  create-plan   - Create plan from requirements or questions"
+            echo "  dev|run       - Run development mode"
             echo
             echo "Run without arguments for interactive mode."
             exit 1

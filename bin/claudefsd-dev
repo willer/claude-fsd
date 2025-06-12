@@ -221,7 +221,7 @@ Your final output should consist only of the execution details, linter output, c
     # also run it in the background because it's very slow
     # Only run if codex is available
     if command -v codex >/dev/null 2>&1; then
-        (codex --full-auto -q "
+        (codex --full-auto -m o3 -q "
 You are the team's static code reviewer.
 A developer has completed this task: $nexttask
 The developer's notes are at $LOGFILE-developer .

@@ -1,0 +1,204 @@
+#!/bin/bash
+
+set -e
+
+# Check dependencies
+$(dirname "$0")/claudefsd-check-dependencies
+
+# Get the actual location of this script (resolving symlinks)
+if command -v realpath >/dev/null 2>&1; then
+    SCRIPT_PATH="$(realpath "$0")"
+elif command -v readlink >/dev/null 2>&1; then
+    # macOS doesn't have realpath by default, but has readlink
+    SCRIPT_PATH="$0"
+    while [ -L "$SCRIPT_PATH" ]; do
+        SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    done
+    SCRIPT_PATH="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)/$(basename "$SCRIPT_PATH")"
+else
+    # Fallback if neither command is available
+    SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+fi
+
+# Get the directory containing the script and its parent (package root)
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROMPTS_DIR="$PROJECT_ROOT/prompts"
+
+# Verify prompts directory exists
+if [ ! -d "$PROMPTS_DIR" ]; then
+    echo "Error: Could not locate prompts directory at $PROMPTS_DIR"
+    exit 1
+fi
+
+mkdir -p docs
+mkdir -p logs
+
+if [ ! -f BRIEF.md ]; then
+    echo "No BRIEF.md file found, please create one first"
+    exit 1
+fi
+
+LOGFILE="logs/claude-$(date +%Y%m%d_%H%M%S).txt"
+
+echo -e "\033[32m==================================================================\033[0m"
+echo -e "\033[32m== ANALYZING PROJECT BRIEF WITH EXPERT PERSONAS\033[0m"
+echo -e "\033[32m==================================================================\033[0m"
+
+# Create a coordinator prompt to select all relevant personas
+coordinator_prompt="
+You are a Project Manager analyzing a software project brief to determine which experts should contribute questions.
+
+=== PROJECT BRIEF ===
+$(cat BRIEF.md)
+
+=== INSTRUCTIONS ===
+Analyze the project and list which expert personas should ask questions.
+Consider all available experts:
+- DATABASE_ADMINISTRATOR: For data storage, schemas, performance
+- TECHNICAL_ARCHITECT: For system design, architecture patterns
+- UX_EXPERT: For user interface and experience
+- SOFTWARE_ENGINEER: For backend implementation, algorithms, APIs
+- FRONTEND_DEVELOPER: For UI frameworks, state management, browser concerns
+- DEVOPS_ENGINEER: For deployment, infrastructure, operations
+- SECURITY_EXPERT: For security, authentication, compliance
+
+Output a comma-separated list of the relevant personas (e.g., DATABASE_ADMINISTRATOR,SOFTWARE_ENGINEER,DEVOPS_ENGINEER).
+Include only personas that are truly relevant to this project.
+"
+
+echo "Determining relevant expert personas..."
+PERSONAS=$(claude --model sonnet -p "$coordinator_prompt" 2>/dev/null | tail -1)
+
+# Clean up and validate personas
+PERSONAS=$(echo "$PERSONAS" | tr -d ' \n\r')
+IFS=',' read -ra PERSONA_ARRAY <<< "$PERSONAS"
+
+echo "Selected personas: ${#PERSONA_ARRAY[@] experts}"
+for persona in "${PERSONA_ARRAY[@]}"; do
+    echo "  - $persona"
+done
+
+# Initialize questions file
+cat > docs/QUESTIONS.md <<EOF
+# Project Questions
+
+Generated from BRIEF.md on $(date)
+
+Please answer each question below. The questions are organized by expert domain.
+
+---
+
+EOF
+
+# Generate questions for each persona
+TOTAL_QUESTIONS=0
+
+for persona in "${PERSONA_ARRAY[@]}"; do
+    echo
+    echo "Generating questions from $persona..."
+    
+    # Map persona to prompt file
+    case $persona in
+        DATABASE_ADMINISTRATOR|DBA)
+            prompt_file="$PROMPTS_DIR/interview_dba_adapted.txt"
+            display_name="Database Administrator"
+            ;;
+        TECHNICAL_ARCHITECT)
+            prompt_file="$PROMPTS_DIR/interview_technical_architect.txt"
+            display_name="Technical Architect"
+            ;;
+        UX_EXPERT)
+            prompt_file="$PROMPTS_DIR/interview_ux_expert.txt"
+            display_name="UX Expert"
+            ;;
+        SOFTWARE_ENGINEER)
+            prompt_file="$PROMPTS_DIR/interview_software_engineer.txt"
+            display_name="Software Engineer"
+            ;;
+        FRONTEND_DEVELOPER)
+            prompt_file="$PROMPTS_DIR/interview_frontend_developer.txt"
+            display_name="Frontend Developer"
+            ;;
+        DEVOPS_ENGINEER)
+            prompt_file="$PROMPTS_DIR/interview_devops_engineer.txt"
+            display_name="DevOps Engineer"
+            ;;
+        SECURITY_EXPERT)
+            prompt_file="$PROMPTS_DIR/interview_security_expert.txt"
+            display_name="Security Expert"
+            ;;
+        *)
+            echo "Unknown persona: $persona, skipping..."
+            continue
+            ;;
+    esac
+    
+    if [ ! -f "$prompt_file" ]; then
+        echo "Prompt file not found for $persona, skipping..."
+        continue
+    fi
+    
+    # Create a batch generation prompt
+    batch_prompt="
+You are a $display_name analyzing a software project brief.
+
+=== PROJECT BRIEF ===
+$(cat BRIEF.md)
+
+=== INSTRUCTIONS ===
+Generate 3-5 essential questions that a $display_name would need answered to successfully contribute to this project.
+
+Focus on:
+$(cat "$prompt_file" | grep -A 20 "focus on:" | grep "^-" || echo "- Key aspects relevant to your expertise")
+
+Make each question specific and actionable. Keep questions under 20 words each.
+Output ONLY the questions, one per line, no numbering or bullets.
+"
+    
+    # Generate questions
+    QUESTIONS=$(claude --model sonnet -p "$batch_prompt" 2>/dev/null)
+    
+    # Add section header
+    echo "" >> docs/QUESTIONS.md
+    echo "## $display_name Questions" >> docs/QUESTIONS.md
+    echo "" >> docs/QUESTIONS.md
+    
+    # Add questions to file
+    QUESTION_NUM=1
+    while IFS= read -r question; do
+        # Skip empty lines
+        [ -z "$question" ] && continue
+        
+        # Clean up question
+        question=$(echo "$question" | sed 's/^[0-9]*\. //' | sed 's/^- //' | sed 's/^• //')
+        
+        TOTAL_QUESTIONS=$((TOTAL_QUESTIONS + 1))
+        echo "### Q$TOTAL_QUESTIONS [$display_name]: $question" >> docs/QUESTIONS.md
+        echo "" >> docs/QUESTIONS.md
+        echo "_Answer:_" >> docs/QUESTIONS.md
+        echo "" >> docs/QUESTIONS.md
+        
+        QUESTION_NUM=$((QUESTION_NUM + 1))
+    done <<< "$QUESTIONS"
+done
+
+# Add footer
+cat >> docs/QUESTIONS.md <<EOF
+---
+
+## Additional Context
+
+If there are any other important details, constraints, or requirements not covered by the questions above, please add them here:
+
+_Additional notes:_
+
+EOF
+
+echo
+echo -e "\033[32m==================================================================\033[0m"
+echo -e "\033[32m== QUESTION GENERATION COMPLETE\033[0m"
+echo -e "\033[32m==================================================================\033[0m"
+echo "Generated $TOTAL_QUESTIONS questions from ${#PERSONA_ARRAY[@]} expert personas"
+echo "Questions saved in docs/QUESTIONS.md"
+echo "Please edit the file to add your answers, then run 'claudefsd create-plan'"
