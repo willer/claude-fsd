@@ -406,6 +406,8 @@ main() {
         if [ -n "$bg_pid" ] && [ ! -f "$QUESTION_CACHE" ]; then
             if [ "$first_question" = "true" ]; then
                 echo -e "${BLUE}Preparing first question...${NC}"
+            else
+                echo -e "${BLUE}[working on next question]${NC}"
             fi
             wait $bg_pid 2>/dev/null || true
             bg_pid=""
