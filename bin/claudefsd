@@ -25,7 +25,9 @@ save_editor_preference() {
 
 # Function to determine default choice based on existing docs
 get_default_choice() {
-    if [ ! -f BRIEF.md ]; then
+    # Use find_brief_file function to check for BRIEF.md
+    source "$(dirname "$0")/claudefsd-find-brief"
+    if ! find_brief_file >/dev/null 2>&1; then
         echo "0"
     elif [ ! -f docs/REQUIREMENTS.md ] && [ ! -f docs/QUESTIONS.md ]; then
         echo "1"  # Interactive interview (recommended)
@@ -50,7 +52,9 @@ show_menu() {
     
     local default_choice=$(get_default_choice)
     
-    if [ ! -f BRIEF.md ]; then
+    # Check for BRIEF.md using find_brief_file
+    source "$(dirname "$0")/claudefsd-find-brief"
+    if ! find_brief_file >/dev/null 2>&1; then
         echo "  0) Create project brief - Start your project with a BRIEF.md file"
     fi
     
@@ -78,12 +82,19 @@ show_menu() {
     fi
     
     echo "  4) Development mode - AI agents work on coding tasks"
-    echo "  5) Exit"
+    echo "  5) Dev-mini mode - Fast parallel execution (for smaller projects)"
+    echo "  6) Exit"
     echo
     
     # Show status of required files
     echo "Current status:"
-    [ -f BRIEF.md ] && echo "  ✓ BRIEF.md exists" || echo "  ✗ BRIEF.md missing"
+    source "$(dirname "$0")/claudefsd-find-brief"
+    local brief_file=$(find_brief_file 2>/dev/null || echo "")
+    if [ -n "$brief_file" ]; then
+        echo "  ✓ $brief_file exists"
+    else
+        echo "  ✗ BRIEF.md missing"
+    fi
     
     # Show interview session status if exists
     if [ -f docs/INTERVIEW-SESSION.json ]; then
@@ -167,7 +178,7 @@ check_dependencies
 check_for_updates() {
     # Only check if we can reach npm registry quickly
     if timeout 2 npm view claude-fsd version >/dev/null 2>&1; then
-        local current_version=$(npm list -g claude-fsd --depth=0 2>/dev/null | grep claude-fsd | sed 's/.*@//')
+        local current_version=$(npm list -g claude-fsd --depth=0 2>/dev/null | grep claude-fsd | sed 's/.*@//' | sed 's/ ->.*//')
         local latest_version=$(timeout 2 npm view claude-fsd version 2>/dev/null)
         
         if [ -n "$current_version" ] && [ -n "$latest_version" ] && [ "$current_version" != "$latest_version" ]; then
@@ -190,27 +201,29 @@ if [ $# -eq 0 ]; then
     
     case $choice in
         0)
-            if [ ! -f BRIEF.md ]; then
+            # Create BRIEF.md in docs/ directory (preferred location)
+            if ! find_brief_file >/dev/null 2>&1; then
                 echo -e "${GREEN}Creating project brief...${NC}"
                 echo
-                echo "# Project Brief" > BRIEF.md
-                echo "" >> BRIEF.md
-                echo "## Vision" >> BRIEF.md
-                echo "Describe the big picture vision and what you want to achieve..." >> BRIEF.md
-                echo "" >> BRIEF.md
-                echo "## Core Requirements" >> BRIEF.md
-                echo "- Core requirement 1" >> BRIEF.md
-                echo "- Core requirement 2" >> BRIEF.md
-                echo "" >> BRIEF.md
-                echo "## Key Features" >> BRIEF.md
-                echo "- Feature 1" >> BRIEF.md
-                echo "- Feature 2" >> BRIEF.md
-                echo "" >> BRIEF.md
-                echo "## Success Criteria" >> BRIEF.md
-                echo "- Success criterion 1" >> BRIEF.md
-                echo "- Success criterion 2" >> BRIEF.md
+                mkdir -p docs
+                echo "# Project Brief" > docs/BRIEF.md
+                echo "" >> docs/BRIEF.md
+                echo "## Vision" >> docs/BRIEF.md
+                echo "Describe the big picture vision and what you want to achieve..." >> docs/BRIEF.md
+                echo "" >> docs/BRIEF.md
+                echo "## Core Requirements" >> docs/BRIEF.md
+                echo "- Core requirement 1" >> docs/BRIEF.md
+                echo "- Core requirement 2" >> docs/BRIEF.md
+                echo "" >> docs/BRIEF.md
+                echo "## Key Features" >> docs/BRIEF.md
+                echo "- Feature 1" >> docs/BRIEF.md
+                echo "- Feature 2" >> docs/BRIEF.md
+                echo "" >> docs/BRIEF.md
+                echo "## Success Criteria" >> docs/BRIEF.md
+                echo "- Success criterion 1" >> docs/BRIEF.md
+                echo "- Success criterion 2" >> docs/BRIEF.md
                 
-                open_with_editor "BRIEF.md"
+                open_with_editor "docs/BRIEF.md"
                 echo
                 echo -e "${GREEN}Brief created! Run claudefsd again to start the interview.${NC}"
             else
@@ -220,7 +233,9 @@ if [ $# -eq 0 ]; then
             ;;
         1)
             # Interactive interview
-            if [ ! -f BRIEF.md ]; then
+            source "$(dirname "$0")/claudefsd-find-brief"
+            local brief_file=$(find_brief_file 2>/dev/null || echo "")
+            if [ -z "$brief_file" ]; then
                 echo -e "${RED}No BRIEF.md found. Please create a project brief first.${NC}"
                 exit 1
             fi
@@ -248,13 +263,8 @@ if [ $# -eq 0 ]; then
             ;;
         3)
             # Create plan - check what source to use
-            if [ -f docs/REQUIREMENTS.md ]; then
-                echo -e "${GREEN}Creating plan from requirements...${NC}"
-                echo
-                # Use requirements-based planning
-                exec "$(dirname "$0")/claudefsd-create-plan-from-requirements"
-            elif [ -f docs/QUESTIONS.md ]; then
-                echo -e "${GREEN}Creating plan from answered questions...${NC}"
+            if [ -f docs/REQUIREMENTS.md ] || [ -f docs/QUESTIONS.md ]; then
+                echo -e "${GREEN}Creating plan from project inputs...${NC}"
                 echo
                 exec "$(dirname "$0")/claudefsd-create-plan"
             else
@@ -268,6 +278,11 @@ if [ $# -eq 0 ]; then
             exec "$(dirname "$0")/claudefsd-dev"
             ;;
         5)
+            echo -e "${GREEN}Starting dev-mini mode (fast parallel execution)...${NC}"
+            echo
+            exec "$(dirname "$0")/claudefsd-dev-mini"
+            ;;
+        6)
             echo "Goodbye!"
             exit 0
             ;;
@@ -287,6 +302,10 @@ else
             shift
             exec "$(dirname "$0")/claudefsd-dev" "$@"
             ;;
+        dev-mini)
+            shift
+            exec "$(dirname "$0")/claudefsd-dev-mini" "$@"
+            ;;
         analyze-brief)
             shift
             exec "$(dirname "$0")/claudefsd-analyze-brief" "$@"
@@ -304,7 +323,8 @@ else
             echo "  interview     - Interactive requirements gathering"
             echo "  analyze-brief - Analyze brief and generate questions (legacy)"
             echo "  create-plan   - Create plan from requirements or questions"
-            echo "  dev|run       - Run development mode"
+            echo "  dev|run       - Run development mode (iterative)"
+            echo "  dev-mini      - Run fast parallel execution mode"
             echo
             echo "Run without arguments for interactive mode."
             exit 1

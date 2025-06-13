@@ -22,7 +22,7 @@ export PATH="$(pwd)/test-env:$PATH"
 
 # Create minimal test structure
 mkdir -p docs logs
-echo "# Test Brief" > BRIEF.md
+echo "# Test Brief" > docs/BRIEF.md
 echo "# Test Plan\n- [ ] Test task" > docs/PLAN.md
 
 # Run claudefsd-dev with timeout to prevent infinite hanging

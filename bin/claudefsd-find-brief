@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Function to find BRIEF.md with backwards compatibility
+# Prefers docs/BRIEF.md but falls back to root BRIEF.md
+find_brief_file() {
+    if [ -f "docs/BRIEF.md" ]; then
+        echo "docs/BRIEF.md"
+    elif [ -f "BRIEF.md" ]; then
+        echo "BRIEF.md"
+    else
+        return 1
+    fi
+}
+
+# If called directly, just output the path
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+    find_brief_file
+fi

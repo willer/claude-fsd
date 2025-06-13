@@ -11,9 +11,11 @@ mkdir -p logs
 mkdir -p tmp
 export TMPDIR=tmp/
 
-# look for required files
-if [ ! -f BRIEF.md ]; then
-    echo "No BRIEF.md file found, please create one first "
+# look for required files (prefer docs/BRIEF.md, fallback to BRIEF.md)
+source "$(dirname "$0")/claudefsd-find-brief"
+BRIEF_FILE=$(find_brief_file)
+if [ $? -ne 0 ]; then
+    echo "No BRIEF.md file found in docs/ or root directory, please create one first"
     exit 1
 fi
 
@@ -33,7 +35,7 @@ echo -e "\033[32m===============================================================
 
     prompt2="
 Read all of these documents if they exist:
-- BRIEF.md -- the project brief
+- $BRIEF_FILE -- the project brief
 - docs/QUESTIONS.md -- the project questions (with answers) from analyze-brief or interview
 - docs/REQUIREMENTS.md -- consolidated requirements from interview process
 - docs/CLAUDE-NOTES.md -- AI's working notes and understanding
@@ -89,7 +91,7 @@ if command -v codex >/dev/null 2>&1; then
     o3_prompt="You are an elite software architect and strategic planner using o3-pro's advanced reasoning capabilities.
 
 CONTEXT DOCUMENTS:
-$([ -f BRIEF.md ] && echo "=== PROJECT BRIEF ===" && cat BRIEF.md && echo "")
+$([ -f "$BRIEF_FILE" ] && echo "=== PROJECT BRIEF ===" && cat "$BRIEF_FILE" && echo "")
 $([ -f docs/QUESTIONS.md ] && echo "=== QUESTIONS & ANSWERS ===" && cat docs/QUESTIONS.md && echo "")
 $([ -f docs/REQUIREMENTS.md ] && echo "=== CONSOLIDATED REQUIREMENTS ===" && cat docs/REQUIREMENTS.md && echo "")
 $([ -f docs/INTERVIEW-SESSION.json ] && echo "=== INTERVIEW METADATA ===" && cat docs/INTERVIEW-SESSION.json && echo "")

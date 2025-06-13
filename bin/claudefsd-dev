@@ -1,6 +1,38 @@
 #!/bin/bash
+#
+# Usage: claudefsd-dev [scale]
+# 
+# scale: "small" for simple projects (≤$2K scale, minimal solutions)
+#        "large" for complex projects ($1M+ scale, comprehensive solutions)
+#        If not specified, auto-detects from BRIEF.md content or defaults to "large"
+#
+# Examples:
+#   claudefsd-dev small    # Force small-scale development mode
+#   claudefsd-dev large    # Force large-scale development mode  
+#   claudefsd-dev          # Auto-detect scale from project brief
 
 set -e
+
+# Parse command line arguments for project scale
+PROJECT_SCALE="$1"
+if [ -z "$PROJECT_SCALE" ]; then
+    # Try to detect scale from BRIEF.md or default to large scale
+    if [ -f "BRIEF.md" ] || [ -f "docs/BRIEF.md" ]; then
+        BRIEF_FILE="BRIEF.md"
+        [ -f "docs/BRIEF.md" ] && BRIEF_FILE="docs/BRIEF.md"
+        
+        # Look for scale indicators in brief
+        if grep -qi "simple\|small\|quick\|prototype\|poc\|minimal" "$BRIEF_FILE"; then
+            PROJECT_SCALE="small"
+        else
+            PROJECT_SCALE="large"
+        fi
+    else
+        PROJECT_SCALE="large"  # Default to large scale
+    fi
+fi
+
+echo "Project scale detected/set: $PROJECT_SCALE"
 
 # Check dependencies
 $(dirname "$0")/claudefsd-check-dependencies
@@ -51,7 +83,7 @@ Please follow these steps to complete your task:
 
 1. Read the contents of docs/PLAN.md in order.
 2. Identify all open tasks that need to be done by the developer.
-3. Gather related context from docs/PLAN.md, BRIEF.md, docs/QUESTIONS.md, and docs/CLAUDE-NOTES.md.
+3. Gather related context from docs/PLAN.md, docs/BRIEF.md (or BRIEF.md), docs/QUESTIONS.md, and docs/CLAUDE-NOTES.md.
 4. Consider the bigger picture of the project and potential impacts of each task.
 5. Evaluate the risk and efficiency of potential changes for each task.
 6. Prioritize the tasks based primarily on their order in the plan, but also factor in importance, risk, and efficiency.
@@ -109,10 +141,25 @@ Please proceed with your analysis and task identification based on the project d
         echo -e "\033[33mThis is your 4th development cycle. Taking a step back for architectural planning.\033[0m"
     fi
 
+    # Define scale-appropriate thinking directive
+    if [ "$PROJECT_SCALE" = "small" ]; then
+        THINKING_DIRECTIVE="**IMPLEMENTATION DIRECTIVE**: Focus on the minimal solution that meets requirements. For simple tasks, keep implementations under 100 lines. Only add complexity if explicitly required. This is a small-scale project prioritizing speed and simplicity."
+        SCALE_CONSTRAINTS="
+**SMALL PROJECT CONSTRAINTS**:
+- NO GOLDPLATING: If task says \"small\" or \"simple\", implement minimal solution (≤100 lines)
+- REJECT OVER-ENGINEERING: Don't add abstraction layers, custom exceptions, or modular designs unless explicitly required
+- Single entry point preferred over multiple scripts
+- Avoid elaborate error hierarchies for simple use cases
+- Focus on getting it working quickly rather than enterprise patterns"
+    else
+        THINKING_DIRECTIVE="**ULTRA-THINKING DIRECTIVE**: Before beginning, engage in extended deep thinking about the task implications, architectural considerations, and optimal approach. This is a potentially \$1M+ scale project that demands exceptional thoroughness."
+        SCALE_CONSTRAINTS=""
+    fi
+
     # Define the developer prompt
     DEVELOPER_PROMPT="
 $MEGATHINKING_MODE
-**ULTRA-THINKING DIRECTIVE**: Before beginning, engage in extended deep thinking about the task implications, architectural considerations, and optimal approach. This is a potentially \$1M+ scale project that demands exceptional thoroughness.
+$THINKING_DIRECTIVE
 
 You are an AI developer working within an automated development environment. Your role is to complete tasks, plan implementations, and maintain high-quality code. Here is the specific task you need to complete:
 
@@ -167,6 +214,7 @@ Please follow these steps to complete the task:
 7. Add any ideas for future improvements or features to the IDEAS.md file. Summarize these additions in <ideas_update> tags.
 
 Important guidelines:
+$SCALE_CONSTRAINTS
 
 - Simplicity: Delete old code, avoid hoarding. Use git for version control.
 - Brutal honesty: Disagree when needed. If something fails, let it fail visibly.
@@ -227,7 +275,7 @@ A developer has completed this task: $nexttask
 The developer's notes are at $LOGFILE-developer .
 
 Related docs:
-- BRIEF.md
+- docs/BRIEF.md (or BRIEF.md)
 - docs/PLAN.md
 - docs/QUESTIONS.md
 - docs/CLAUDE-NOTES.md
@@ -279,7 +327,7 @@ IMPORTANT: Before starting your review, you MUST read and understand:
 3. Verify that all recent changes comply with the architectural and development guidelines from both files
 
 To conduct your review, you have access to the following related documents:
-- BRIEF.md
+- docs/BRIEF.md (or BRIEF.md)
 - docs/PLAN.md
 - docs/QUESTIONS.md
 - docs/CLAUDE-NOTES.md

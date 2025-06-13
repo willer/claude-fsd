@@ -32,8 +32,9 @@ cp -r $OLDPWD/prompts .
 # Test without BRIEF.md
 echo "5" | ./bin/claudefsd | grep -q "BRIEF.md missing" && echo "✓ Detects missing BRIEF.md" || echo "✗ Failed to detect missing BRIEF.md"
 
-# Create BRIEF.md
-echo "# Test Project" > BRIEF.md
+# Create docs directory and BRIEF.md (prefer docs location)
+mkdir -p docs
+echo "# Test Project" > docs/BRIEF.md
 
 # Test default choice logic
 echo "Testing default choice: "

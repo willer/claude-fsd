@@ -51,9 +51,11 @@ REQUIREMENTS_FILE="docs/REQUIREMENTS.md"
 QUESTION_CACHE="tmp/next_question.txt"
 PERSONA_CACHE="tmp/next_persona.txt"
 
-# Check for BRIEF.md
-if [ ! -f BRIEF.md ]; then
-    echo -e "${RED}No BRIEF.md file found. Please create one first.${NC}"
+# Check for BRIEF.md (prefer docs/BRIEF.md, fallback to BRIEF.md)
+source "$(dirname "$0")/claudefsd-find-brief"
+BRIEF_FILE=$(find_brief_file)
+if [ $? -ne 0 ]; then
+    echo -e "${RED}No BRIEF.md file found in docs/ or root directory. Please create one first.${NC}"
     exit 1
 fi
 
@@ -145,7 +147,7 @@ update_session() {
 
 # Background function to prepare next question
 prepare_next_question_bg() {
-    local brief_content=$(cat BRIEF.md)
+    local brief_content=$(cat "$BRIEF_FILE")
     local all_qa=$(tail -n +4 "$QUESTIONS_FILE" 2>/dev/null || echo "No questions asked yet.")
     local recent_qa=$(tail -n 20 "$QUESTIONS_FILE" 2>/dev/null || echo "No questions asked yet.")
     
@@ -349,7 +351,7 @@ consolidate_requirements() {
 You are a technical writer consolidating interview responses into a comprehensive requirements document.
 
 === PROJECT BRIEF ===
-$(cat BRIEF.md)
+$(cat "$BRIEF_FILE")
 
 === INTERVIEW Q&A ===
 $(cat "$QUESTIONS_FILE")
