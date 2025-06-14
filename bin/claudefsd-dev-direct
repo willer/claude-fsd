@@ -33,14 +33,14 @@ check_requirements
 
 # Create logs directory
 mkdir -p "$OLDPWD/logs"
-LOGFILE="$OLDPWD/logs/claude-dev-mini-$(date +%Y%m%d_%H%M%S).txt"
+LOGFILE="$OLDPWD/logs/claude-dev-direct-$(date +%Y%m%d_%H%M%S).txt"
 
 echo -e "\033[32m==================================================================\033[0m"
-echo -e "\033[32m== CLAUDE FSD DEV-MINI: FAST PARALLEL EXECUTION MODE\033[0m"
+echo -e "\033[32m== CLAUDE FSD DEV-DIRECT: PARALLEL EXECUTION MODE\033[0m"
 echo -e "\033[32m==================================================================\033[0m"
 echo
-echo "This mode attempts to complete the entire project in one shot using"
-echo "parallel Task agents. Best for smaller projects that fit in context."
+echo "Direct execution mode uses parallel Task agents to complete projects"
+echo "in a single context. Optimized for small to medium-sized features."
 echo
 
 # Go back to the project directory
@@ -48,6 +48,8 @@ cd "$OLDPWD"
 
 # Build the omnibus prompt
 omnibus_prompt="You are an elite development team leader using Claude's Task agent capabilities for rapid parallel execution.
+
+**ANTI-GOLDPLATING DIRECTIVE**: This is direct execution mode optimized for small to medium projects. Focus on minimal viable solutions that meet requirements. Avoid over-engineering, unnecessary abstractions, or enterprise patterns unless explicitly required.
 
 PROJECT CONTEXT:
 $([ -f docs/BRIEF.md ] && echo "=== PROJECT BRIEF ===" && cat docs/BRIEF.md || [ -f BRIEF.md ] && echo "=== PROJECT BRIEF ===" && cat BRIEF.md && echo "")
@@ -67,6 +69,13 @@ CRITICAL ANTI-PATTERNS TO AVOID (from CLAUDE.md):
 - NO PRODUCTION FALLBACKS: Avoid try/catch blocks that hide errors with default values
 - NO BACKUP COPIES: Use git for version control, never create backup files
 - DELETE OLD CODE: Remove unused functions and scripts, keep the codebase clean
+
+DIRECT MODE CONSTRAINTS:
+- MINIMAL SOLUTIONS: Keep implementations simple and focused
+- NO GOLDPLATING: Don't add features not explicitly requested
+- SINGLE ENTRY POINTS: Prefer single scripts over complex architectures
+- AVOID OVER-ENGINEERING: No custom exceptions, elaborate hierarchies, or abstractions unless required
+- SPEED OVER ENTERPRISE: Get it working correctly first, optimize for enterprise patterns only if needed
 
 YOUR MISSION:
 1. Analyze the full project plan and identify all tasks that need to be completed

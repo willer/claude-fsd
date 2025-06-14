@@ -30,13 +30,13 @@ get_default_choice() {
     if ! find_brief_file >/dev/null 2>&1; then
         echo "0"
     elif [ ! -f docs/REQUIREMENTS.md ] && [ ! -f docs/QUESTIONS.md ]; then
-        echo "1"  # Interactive interview (recommended)
+        echo "1"  # Interactive interview
     elif [ -f docs/REQUIREMENTS.md ] && [ ! -f docs/PLAN.md ]; then
-        echo "3"  # Create plan from requirements
+        echo "2"  # Create plan from requirements
     elif [ -f docs/QUESTIONS.md ] && [ ! -f docs/PLAN.md ]; then
-        echo "3"  # Create plan from questions
+        echo "2"  # Create plan from questions
     else
-        echo "4"  # Development mode
+        echo "3"  # Development mode
     fi
 }
 
@@ -62,28 +62,27 @@ show_menu() {
     if [ -f docs/INTERVIEW-SESSION.json ]; then
         local session_status=$(jq -r '.status' docs/INTERVIEW-SESSION.json 2>/dev/null || echo "unknown")
         if [ "$session_status" = "in_progress" ]; then
-            echo "  1) Interactive interview - Resume existing interview session"
+            echo "  1) Interview - Resume existing interview session"
         else
-            echo "  1) Interactive interview - Gather requirements through expert Q&A"
+            echo "  1) Interview - Gather requirements through expert Q&A"
         fi
     else
-        echo "  1) Interactive interview - Gather requirements through expert Q&A [RECOMMENDED]"
+        echo "  1) Interview - Gather requirements through expert Q&A"
     fi
-    
-    echo "  2) Batch questions - Generate all questions at once (alternative to interview)"
     
     # Show create plan option based on what exists
     if [ -f docs/REQUIREMENTS.md ]; then
-        echo "  3) Create plan - Generate development plan from requirements"
+        echo "  2) Create plan - Generate development plan from requirements"
     elif [ -f docs/QUESTIONS.md ]; then
-        echo "  3) Create plan - Generate plan from answered questions"
+        echo "  2) Create plan - Generate plan from answered questions"
     else
-        echo "  3) [Requires interview or questions first]"
+        echo "  2) [Requires interview first]"
     fi
     
-    echo "  4) Development mode - AI agents work on coding tasks"
-    echo "  5) Dev-mini mode - Fast parallel execution (for smaller projects)"
-    echo "  6) Exit"
+    echo "  3) Development - Choose development approach:"
+    echo "    3a) Direct execution - Single-context parallel agents (small-medium projects)"
+    echo "    3b) Iterative development - Multi-cycle planning loop (large projects)"
+    echo "  4) Exit"
     echo
     
     # Show status of required files
@@ -239,50 +238,40 @@ if [ $# -eq 0 ]; then
                 echo -e "${RED}No BRIEF.md found. Please create a project brief first.${NC}"
                 exit 1
             fi
-            echo -e "${GREEN}Starting interactive interview...${NC}"
+            echo -e "${GREEN}Starting interview...${NC}"
             echo
             exec "$(dirname "$0")/claudefsd-interview"
             ;;
         2)
-            # Batch questions
-            echo -e "${GREEN}Analyzing brief and generating questions (batch mode)...${NC}"
-            echo
-            "$(dirname "$0")/claudefsd-analyze-brief"
-            
-            if [ $? -eq 0 ]; then
-                echo
-                echo -e "${GREEN}Questions generated in docs/QUESTIONS.md${NC}"
-                echo "Please answer the questions, then run claudefsd again to create the plan."
-                echo
-                
-                open_with_editor "docs/QUESTIONS.md"
-                
-                echo
-                echo -e "${GREEN}Questions saved. After answering them, run 'claudefsd' again and select option 3 to create the plan.${NC}"
-            fi
-            ;;
-        3)
             # Create plan - check what source to use
             if [ -f docs/REQUIREMENTS.md ] || [ -f docs/QUESTIONS.md ]; then
                 echo -e "${GREEN}Creating plan from project inputs...${NC}"
                 echo
                 exec "$(dirname "$0")/claudefsd-create-plan"
             else
-                echo -e "${RED}No requirements or questions found. Please run the interview or generate questions first.${NC}"
+                echo -e "${RED}No requirements or questions found. Please run the interview first.${NC}"
                 exit 1
             fi
             ;;
-        4)
-            echo -e "${GREEN}Starting development mode...${NC}"
+        3)
+            # Auto-detect development mode
+            echo -e "${GREEN}Auto-detecting development approach...${NC}"
             echo
             exec "$(dirname "$0")/claudefsd-dev"
             ;;
-        5)
-            echo -e "${GREEN}Starting dev-mini mode (fast parallel execution)...${NC}"
+        3a)
+            # Direct execution mode
+            echo -e "${GREEN}Starting direct execution mode...${NC}"
             echo
-            exec "$(dirname "$0")/claudefsd-dev-mini"
+            exec "$(dirname "$0")/claudefsd-dev" direct
             ;;
-        6)
+        3b)
+            # Iterative development mode
+            echo -e "${GREEN}Starting iterative development mode...${NC}"
+            echo
+            exec "$(dirname "$0")/claudefsd-dev" iterative
+            ;;
+        4)
             echo "Goodbye!"
             exit 0
             ;;
@@ -302,17 +291,24 @@ else
             shift
             exec "$(dirname "$0")/claudefsd-dev" "$@"
             ;;
-        dev-mini)
-            shift
-            exec "$(dirname "$0")/claudefsd-dev-mini" "$@"
-            ;;
-        analyze-brief)
-            shift
-            exec "$(dirname "$0")/claudefsd-analyze-brief" "$@"
-            ;;
         create-plan)
             shift
             exec "$(dirname "$0")/claudefsd-create-plan" "$@"
+            ;;
+        dev-direct)
+            # Direct CLI access to direct mode
+            shift
+            exec "$(dirname "$0")/claudefsd-dev" direct "$@"
+            ;;
+        dev-iterative)
+            # Direct CLI access to iterative mode
+            shift
+            exec "$(dirname "$0")/claudefsd-dev" iterative "$@"
+            ;;
+        dev-mini)
+            # Legacy support - redirect to direct mode
+            shift
+            exec "$(dirname "$0")/claudefsd-dev" direct "$@"
             ;;
         *)
             echo -e "${RED}Unknown command: $1${NC}"
@@ -320,11 +316,11 @@ else
             echo "Usage: claudefsd [command]"
             echo
             echo "Commands:"
-            echo "  interview     - Interactive requirements gathering"
-            echo "  analyze-brief - Analyze brief and generate questions (legacy)"
-            echo "  create-plan   - Create plan from requirements or questions"
-            echo "  dev|run       - Run development mode (iterative)"
-            echo "  dev-mini      - Run fast parallel execution mode"
+            echo "  interview      - Interactive requirements gathering"
+            echo "  create-plan    - Create plan from requirements or questions"
+            echo "  dev|run        - Run development mode (auto-detects approach)"
+            echo "  dev-direct     - Force direct execution mode"
+            echo "  dev-iterative  - Force iterative development mode"
             echo
             echo "Run without arguments for interactive mode."
             exit 1

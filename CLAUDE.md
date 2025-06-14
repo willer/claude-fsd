@@ -11,12 +11,16 @@ claude-fsd is an automated development system that runs continuous AI agent-driv
 ```bash
 # Main entry points
 claude-fsd              # Interactive mode with guided setup
-claude-fsd dev          # Jump directly to development mode
-claudefsd-dev           # Direct development agent execution (continuous loop)
+claude-fsd dev          # Jump directly to development mode (auto-detects approach)
+claudefsd-dev           # Development dispatcher (routes to direct or iterative)
+
+# Development modes
+claudefsd-dev-direct    # Single-context parallel execution (small-medium projects)
+claudefsd-dev-iterative # Multi-iteration loop development (large projects)
 
 # Planning and setup
-claudefsd-analyze-brief # Generate questions from BRIEF.md (uses opus model)
-claudefsd-create-plan   # Create development plan from answered questions (uses opus model)
+claudefsd-interview     # Interactive expert Q&A to gather requirements (uses opus model)
+claudefsd-create-plan   # Create development plan from interview results (uses opus model)
 
 # Testing and validation
 ./test-failure-detection.sh  # Test failure detection mechanisms
@@ -27,13 +31,31 @@ claudefsd-create-plan   # Create development plan from answered questions (uses 
 The system automatically selects Claude models based on the complexity and nature of each task:
 
 - **Opus Model**: Used for complex architectural work requiring deep thinking
-  - Upfront planning (`claudefsd-analyze-brief`)
+  - Requirements gathering (`claudefsd-interview`)
   - Architecture planning (`claudefsd-create-plan`)
   - Megathinking mode (every 4th iteration in development cycle)
   
 - **Sonnet Model**: Used for regular development iterations
   - Standard development tasks (iterations 1, 2, 3, 5, 6, 7, etc.)
   - All three agents (Planner, Developer, Reviewer) use the same model per iteration
+
+## Development Architecture Selection
+
+The system automatically detects project complexity and chooses the appropriate development architecture:
+
+### **Direct Execution Mode** (small to medium projects)
+- **Architecture**: Single-context with parallel Task agents
+- **Keywords detected**: simple, small, quick, prototype, minimal, script, tool, utility, feature, module
+- **Approach**: Anti-goldplating constraints, minimal viable solutions
+- **Best for**: Scripts, utilities, features, API modules, blueprints (≤2000 lines)
+
+### **Iterative Development Mode** (large projects)  
+- **Architecture**: Multi-cycle Planner → Developer → Reviewer → Tester loop
+- **Default**: Used for complex/ambiguous projects
+- **Approach**: Milder anti-goldplating (bulletproof but focused on plan)
+- **Best for**: Enterprise conversions, large systems, complex applications (2000+ lines)
+
+Override detection with: `claudefsd-dev direct` or `claudefsd-dev iterative`
 
 ## Architecture
 
@@ -47,11 +69,11 @@ The system uses multiple AI agents working in cycles:
 ### Key Files Structure
 ```
 docs/
+├── BRIEF.md         # Project description (preferred location)
 ├── PLAN.md          # Development roadmap (primary task list)
 ├── CLAUDE-NOTES.md  # AI architect analysis
 ├── QUESTIONS.md     # Clarification questions
 └── IDEAS.md         # Future improvements
-BRIEF.md             # Project description
 logs/                # AI session logs with timestamps
 ```
 
