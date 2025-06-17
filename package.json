@@ -1,6 +1,6 @@
 {
   "name": "claude-fsd",
-  "version": "1.5.10",
+  "version": "1.5.15",
   "description": "Claude Full Self Drive tools for autonomous AI-powered development",
   "bin": {
     "claude-fsd": "bin/claude-fsd",

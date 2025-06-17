@@ -9,7 +9,7 @@
 # - Intelligent task planning and coordination
 #
 
-set -e
+#set -e
 
 # Get the actual location of this script (resolving symlinks)
 if command -v realpath >/dev/null 2>&1; then
@@ -91,7 +91,7 @@ while true; do
 
     # Build the development prompt combining intelligent task selection with parallel execution
     DEVELOPMENT_PROMPT="$MEGATHINKING_MODE
-You are an elite development team leader working in an automated development environment. You combine intelligent task selection with parallel execution capabilities for maximum efficiency.
+You are an elite AI developer working in an automated development environment. Your job is to IMPLEMENT tasks from the project plan, not just analyze them. You can either implement tasks directly yourself or coordinate parallel Task agents for independent work.
 
 **PROJECT CONTEXT:**
 $(source "$SCRIPT_DIR/claudefsd-find-brief" && brief_file=$(find_brief_file 2>/dev/null) && [ -n "$brief_file" ] && echo "=== PROJECT BRIEF ===" && cat "$brief_file" && echo "")
@@ -115,35 +115,30 @@ $([ -f "README.md" ] && echo "=== README ===" && cat "README.md" && echo "")
 
 **YOUR MISSION:**
 
-**PHASE 1: INTELLIGENT TASK ANALYSIS**
-1. Read the current docs/PLAN.md and identify all open tasks that need completion
-2. Analyze task dependencies and determine what can be done in parallel
-3. Consider the architectural implications of each task
-4. Prioritize tasks based on:
-   - Order in the plan (primary factor)
-   - Dependencies between tasks
-   - Risk and efficiency considerations
-   - Overall project architecture
+**PHASE 1: TASK SELECTION**
+1. Read docs/PLAN.md and work through tasks in order
+2. If a phase references a sub-plan file, read that file as well
+3. Complete tasks in the order they appear - don't skip ahead
+4. Identify if tasks can be done in parallel
 
 **PHASE 2: EXECUTION STRATEGY**
 Choose the optimal approach:
 
 **Option A: Single Focus Task** (for sequential dependencies or complex architectural work)
-- Select the highest priority open task
-- Implement with deep thinking and careful consideration
-- Update docs/PLAN.md to mark task as complete
+- Implement the next task in order using appropriate tools (Edit, Write, Bash, etc.)
+- Update docs/PLAN.md to mark task as complete with [x]
 
 **Option B: Parallel Task Execution** (for independent tasks)
 - Identify 2-4 related but independent tasks that can be done simultaneously
-- Launch multiple Task agents with coordinated objectives
-- Each agent should understand the full project context
-- Ensure consistency across all parallel work
+- Use the Task tool to launch multiple agents with specific implementation briefs
+- Each agent brief should include full project context and specific implementation goals
+- Coordinate the parallel work to ensure consistency
 
 **PHASE 3: COMPLETION CHECK**
 After completing work:
 1. Update docs/PLAN.md to reflect completed tasks
 2. Run any linters or tests specified in the project
-3. If ALL tasks in docs/PLAN.md are complete, respond with: **<ALL DONE>**
+3. Report on what was accomplished and what remains
 
 **EXECUTION GUIDELINES:**
 - **BUILD BULLETPROOF**: Create robust solutions that handle edge cases
@@ -161,11 +156,11 @@ When using parallel Task agents, ensure each one:
 
 **OUTPUT FORMAT:**
 1. **<task_analysis>**: List identified open tasks and selected approach
-2. **<execution>**: Details of your implementation work
+2. **<execution>**: Details of your ACTUAL implementation work (code written, files edited, commands run)
 3. **<plan_updates>**: How you updated docs/PLAN.md to reflect progress
-4. **<completion_check>**: Status of remaining work, or **<ALL DONE>** if complete
+4. **<completion_check>**: Status of remaining work
 
-Begin by analyzing the current state of docs/PLAN.md and determining your execution strategy."
+IMPORTANT: You must ACTUALLY IMPLEMENT tasks, not just describe what should be done. Use Edit, Write, Bash, and Task tools to complete real work. Begin by analyzing docs/PLAN.md and then IMPLEMENT the next task in order."
 
     # Save the prompt to the log file first
     echo "=== DEVELOPMENT PROMPT ===" > $LOGFILE
@@ -178,11 +173,53 @@ Begin by analyzing the current state of docs/PLAN.md and determining your execut
     echo "Running development with $CLAUDE_MODEL model..."
     time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "$DEVELOPMENT_PROMPT" 2>&1 | tee -a $LOGFILE
 
-    # Check if all tasks are complete
+    # Extract what task was worked on from the developer's output
+    DEVELOPER_OUTPUT=$(sed -n '/=== OUTPUT ===/,$p' $LOGFILE)
+
+    echo -e "\033[32m==================================================================\033[0m"
+    echo -e "\033[32m== REVIEWING/VERIFYING WORK\033[0m"
+    echo -e "\033[32m==================================================================\033[0m"
+
+    # Define the verifier prompt
+    VERIFIER_PROMPT="You are an expert code reviewer tasked with verifying a developer's work.
+
+**DEVELOPER'S OUTPUT:**
+$DEVELOPER_OUTPUT
+
+**YOUR TASKS:**
+1. Review what the developer claims to have done
+2. Verify the work was actually completed by checking files
+3. Look for any cheating patterns (disabled tests, silent fallbacks, etc.)
+4. Check if ALL tasks in docs/PLAN.md are now complete
+
+**VERIFICATION CHECKLIST:**
+- Did the developer actually implement code (not just analyze)?
+- Are all changes working correctly?
+- Do tests pass (if applicable)?
+- Is the task properly marked as complete in docs/PLAN.md?
+
+**IMPORTANT:** 
+- If you find issues, describe them clearly
+- If ALL tasks in the entire project are complete and verified, output: <VERIFIED_ALL_DONE>
+- Otherwise, describe what still needs to be done
+
+Be thorough but concise in your verification."
+
+    VERIFIER_LOGFILE="${LOGFILE}-verifier"
+    echo "=== VERIFIER PROMPT ===" > $VERIFIER_LOGFILE
+    echo "$VERIFIER_PROMPT" >> $VERIFIER_LOGFILE
+    echo "=== END PROMPT ===" >> $VERIFIER_LOGFILE
+    echo "" >> $VERIFIER_LOGFILE
+    echo "=== OUTPUT ===" >> $VERIFIER_LOGFILE
+
+    # Run verifier
+    time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "$VERIFIER_PROMPT" 2>&1 | tee -a $VERIFIER_LOGFILE
+
+    # Check if verifier has confirmed all tasks are complete
     set +e
-    if grep -q "<ALL DONE>" $LOGFILE; then
+    if grep -q "<VERIFIED_ALL_DONE>" $VERIFIER_LOGFILE; then
         echo -e "\033[32m==================================================================\033[0m"
-        echo -e "\033[32m== PROJECT COMPLETE - ALL TASKS FINISHED!\033[0m"
+        echo -e "\033[32m== PROJECT COMPLETE - ALL TASKS VERIFIED!\033[0m"
         echo -e "\033[32m==================================================================\033[0m"
         exit 0
     fi
