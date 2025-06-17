@@ -1,63 +1,230 @@
 #!/bin/bash
 #
-# Main development dispatcher - routes to appropriate development mode
-# Usage: claudefsd-dev [direct|iterative]
-# 
-# Modes:
-# direct: Single-context parallel execution (small to medium projects)
-# iterative: Multi-iteration loop development (large projects)
+# Main development mode - intelligent task selection with parallel execution
+# Usage: claudefsd-dev
 #
-# Examples:
-#   claudefsd-dev          # Auto-detect mode from project brief
-#   claudefsd-dev direct   # Force direct execution mode
-#   claudefsd-dev iterative # Force iterative loop mode
+# Features:
+# - Fail-fast loop detection and "all done" prompt from iterative mode
+# - Direct parallel Task agent execution from direct mode
+# - Intelligent task planning and coordination
+#
 
 set -e
 
-# Parse command line arguments or auto-detect mode
-DEV_MODE="$1"
-if [ -z "$DEV_MODE" ]; then
-    # Auto-detect mode from BRIEF.md
-    if [ -f "BRIEF.md" ] || [ -f "docs/BRIEF.md" ]; then
-        BRIEF_FILE="BRIEF.md"
-        [ -f "docs/BRIEF.md" ] && BRIEF_FILE="docs/BRIEF.md"
-        
-        # Look for indicators of small/medium vs large projects
-        if grep -qi "simple\|small\|quick\|prototype\|poc\|minimal\|script\|tool\|utility\|feature\|module" "$BRIEF_FILE"; then
-            DEV_MODE="direct"
-        else
-            DEV_MODE="iterative"
-        fi
-    else
-        DEV_MODE="iterative"  # Default to iterative for safety
-    fi
+# Get the actual location of this script (resolving symlinks)
+if command -v realpath >/dev/null 2>&1; then
+    SCRIPT_PATH="$(realpath "$0")"
+elif command -v readlink >/dev/null 2>&1; then
+    # macOS doesn't have realpath by default, but has readlink
+    SCRIPT_PATH="$0"
+    while [ -L "$SCRIPT_PATH" ]; do
+        SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    done
+    SCRIPT_PATH="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)/$(basename "$SCRIPT_PATH")"
+else
+    # Fallback if neither command is available
+    SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 fi
 
-echo "Development mode: $DEV_MODE"
+# Get the directory containing the script
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 
-# Route to appropriate development script
-case "$DEV_MODE" in
-    direct)
-        echo "Launching direct execution mode..."
-        exec "$(dirname "$0")/claudefsd-dev-direct"
-        ;;
-    iterative)
-        echo "Launching iterative development mode..."
-        exec "$(dirname "$0")/claudefsd-dev-iterative"
-        ;;
-    small)
-        # Legacy support - map to direct
-        echo "Legacy 'small' mode - redirecting to direct execution..."
-        exec "$(dirname "$0")/claudefsd-dev-direct"
-        ;;
-    large)
-        # Legacy support - map to iterative
-        echo "Legacy 'large' mode - redirecting to iterative development..."
-        exec "$(dirname "$0")/claudefsd-dev-iterative"
-        ;;
-    *)
-        echo "Unknown development mode: $DEV_MODE"
-        echo "Valid modes: direct, iterative"
+# Check dependencies
+"$SCRIPT_DIR/claudefsd-check-dependencies"
+
+# Function to check for required files
+check_requirements() {
+    # Load find_brief_file function
+    source "$SCRIPT_DIR/claudefsd-find-brief"
+    brief_file=$(find_brief_file 2>/dev/null || echo "")
+    
+    if [ -z "$brief_file" ]; then
+        echo "No BRIEF.md file found in docs/ or root directory. Please create one first."
         exit 1
-        ;;
-esac
+    fi
+    
+    if [ ! -f "docs/PLAN.md" ]; then
+        echo "No docs/PLAN.md file found. Please run 'claudefsd create-plan' first."
+        exit 1
+    fi
+}
+
+# Check requirements
+check_requirements
+
+# Add counter for loop iterations
+LOOP_COUNTER=0
+
+# Failure detection variables
+CONSECUTIVE_FAST_ITERATIONS=0
+MIN_ITERATION_TIME=300  # 5 minutes in seconds
+
+while true; do
+    # Record iteration start time
+    ITERATION_START_TIME=$(date +%s)
+    
+    # Increment loop counter
+    LOOP_COUNTER=$((LOOP_COUNTER + 1))
+    
+    mkdir -p logs
+    # Use a temporary directory for tmp files
+    mkdir -p tmp
+    export TMPDIR=tmp/
+    LOGFILE="logs/claude-dev-$(date +%Y%m%d_%H%M%S).txt"
+
+    echo "Logging to ${LOGFILE} ..."
+
+    echo -e "\033[32m==================================================================\033[0m"
+    echo -e "\033[32m== DEVELOPMENT MODE - ITERATION $LOOP_COUNTER\033[0m"
+    echo -e "\033[32m==================================================================\033[0m"
+
+    # Check if this is the 4th iteration for megathinking mode
+    if [ $((LOOP_COUNTER % 4)) -eq 0 ]; then
+        echo -e "\033[33m**** MEGATHINKING MODE ACTIVATED ****\033[0m"
+        echo -e "\033[33mThis is your 4th development cycle. Taking a step back for architectural planning.\033[0m"
+        MEGATHINKING_MODE="**** MEGATHINKING MODE ACTIVATED ****\nThis is your 4th development cycle. Before proceeding with the next task, please take a step back and use megathinking mode to architecturally plan the next phase of development. Consider the overall structure of the codebase, potential refactoring opportunities, design patterns, technical debt, and how the current work connects to broader project goals.\n\n"
+        CLAUDE_MODEL="opus"
+    else
+        MEGATHINKING_MODE=""
+        CLAUDE_MODEL="sonnet"
+    fi
+
+    # Build the development prompt combining intelligent task selection with parallel execution
+    DEVELOPMENT_PROMPT="$MEGATHINKING_MODE
+You are an elite development team leader working in an automated development environment. You combine intelligent task selection with parallel execution capabilities for maximum efficiency.
+
+**PROJECT CONTEXT:**
+$(source "$SCRIPT_DIR/claudefsd-find-brief" && brief_file=$(find_brief_file 2>/dev/null) && [ -n "$brief_file" ] && echo "=== PROJECT BRIEF ===" && cat "$brief_file" && echo "")
+$([ -f "docs/PLAN.md" ] && echo "=== DEVELOPMENT PLAN ===" && cat "docs/PLAN.md" && echo "")
+$([ -f "docs/REQUIREMENTS.md" ] && echo "=== REQUIREMENTS ===" && cat "docs/REQUIREMENTS.md" && echo "")
+$([ -f "docs/QUESTIONS.md" ] && echo "=== QUESTIONS ===" && cat "docs/QUESTIONS.md" && echo "")
+$([ -f "docs/CLAUDE-NOTES.md" ] && echo "=== TECHNICAL NOTES ===" && cat "docs/CLAUDE-NOTES.md" && echo "")
+$([ -f "README.md" ] && echo "=== README ===" && cat "README.md" && echo "")
+
+**IMPORTANT:** Before starting ANY work, you MUST read and understand:
+1. The project's CLAUDE.md file (if it exists) - this contains project-specific instructions
+2. The user's global CLAUDE.md file at ~/.claude/CLAUDE.md (if it exists) - this contains general development principles
+3. Ensure all your work follows the architectural and development guidelines from both files
+
+**CRITICAL ANTI-PATTERNS TO AVOID (from CLAUDE.md):**
+- NO CHEATING: Never disable tests, exclude files from compilation, or use silent fallbacks
+- FAIL FAST: Integration failures should throw exceptions, not return mock data
+- NO PRODUCTION FALLBACKS: Avoid try/catch blocks that hide errors with default values
+- NO BACKUP COPIES: Use git for version control, never create backup files
+- DELETE OLD CODE: Remove unused functions and scripts, keep the codebase clean
+
+**YOUR MISSION:**
+
+**PHASE 1: INTELLIGENT TASK ANALYSIS**
+1. Read the current docs/PLAN.md and identify all open tasks that need completion
+2. Analyze task dependencies and determine what can be done in parallel
+3. Consider the architectural implications of each task
+4. Prioritize tasks based on:
+   - Order in the plan (primary factor)
+   - Dependencies between tasks
+   - Risk and efficiency considerations
+   - Overall project architecture
+
+**PHASE 2: EXECUTION STRATEGY**
+Choose the optimal approach:
+
+**Option A: Single Focus Task** (for sequential dependencies or complex architectural work)
+- Select the highest priority open task
+- Implement with deep thinking and careful consideration
+- Update docs/PLAN.md to mark task as complete
+
+**Option B: Parallel Task Execution** (for independent tasks)
+- Identify 2-4 related but independent tasks that can be done simultaneously
+- Launch multiple Task agents with coordinated objectives
+- Each agent should understand the full project context
+- Ensure consistency across all parallel work
+
+**PHASE 3: COMPLETION CHECK**
+After completing work:
+1. Update docs/PLAN.md to reflect completed tasks
+2. Run any linters or tests specified in the project
+3. If ALL tasks in docs/PLAN.md are complete, respond with: **<ALL DONE>**
+
+**EXECUTION GUIDELINES:**
+- **BUILD BULLETPROOF**: Create robust solutions that handle edge cases
+- **STAY FOCUSED**: Only implement what's specified in docs/PLAN.md
+- **QUALITY FIRST**: Proper error handling, testing, and documentation
+- **ARCHITECTURAL THINKING**: Consider long-term maintainability
+
+**TASK AGENT COORDINATION:**
+When using parallel Task agents, ensure each one:
+- Has full project context and understands the architecture
+- Knows about related components they might need to integrate with
+- Follows all CLAUDE.md guidelines
+- Implements consistent code style and patterns
+- Handles proper error checking and edge cases
+
+**OUTPUT FORMAT:**
+1. **<task_analysis>**: List identified open tasks and selected approach
+2. **<execution>**: Details of your implementation work
+3. **<plan_updates>**: How you updated docs/PLAN.md to reflect progress
+4. **<completion_check>**: Status of remaining work, or **<ALL DONE>** if complete
+
+Begin by analyzing the current state of docs/PLAN.md and determining your execution strategy."
+
+    # Save the prompt to the log file first
+    echo "=== DEVELOPMENT PROMPT ===" > $LOGFILE
+    echo "$DEVELOPMENT_PROMPT" >> $LOGFILE
+    echo "=== END PROMPT ===" >> $LOGFILE
+    echo "" >> $LOGFILE
+    echo "=== OUTPUT ===" >> $LOGFILE
+
+    # Run claude and append output to the log file
+    echo "Running development with $CLAUDE_MODEL model..."
+    time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "$DEVELOPMENT_PROMPT" 2>&1 | tee -a $LOGFILE
+
+    # Check if all tasks are complete
+    set +e
+    if grep -q "<ALL DONE>" $LOGFILE; then
+        echo -e "\033[32m==================================================================\033[0m"
+        echo -e "\033[32m== PROJECT COMPLETE - ALL TASKS FINISHED!\033[0m"
+        echo -e "\033[32m==================================================================\033[0m"
+        exit 0
+    fi
+    set -e
+
+    # Calculate iteration duration and check for failure patterns
+    ITERATION_END_TIME=$(date +%s)
+    ITERATION_DURATION=$((ITERATION_END_TIME - ITERATION_START_TIME))
+    
+    echo -e "\033[36mIteration $LOOP_COUNTER completed in ${ITERATION_DURATION}s\033[0m"
+    
+    # Check if iteration was suspiciously fast (likely failure mode)
+    if [ $ITERATION_DURATION -lt $MIN_ITERATION_TIME ]; then
+        CONSECUTIVE_FAST_ITERATIONS=$((CONSECUTIVE_FAST_ITERATIONS + 1))
+        echo -e "\033[33mWarning: Fast iteration detected (${ITERATION_DURATION}s < ${MIN_ITERATION_TIME}s threshold)\033[0m"
+        echo -e "\033[33mConsecutive fast iterations: $CONSECUTIVE_FAST_ITERATIONS/3\033[0m"
+        
+        # Exit if too many consecutive fast iterations (likely Claude API failure)
+        if [ $CONSECUTIVE_FAST_ITERATIONS -ge 3 ]; then
+            echo -e "\033[31m==================================================================\033[0m"
+            echo -e "\033[31m== FAILURE MODE DETECTED - THROTTLING ACTIVATED\033[0m"
+            echo -e "\033[31m==================================================================\033[0m"
+            echo -e "\033[31mDetected 3 consecutive iterations under ${MIN_ITERATION_TIME}s each.\033[0m"
+            echo -e "\033[31mThis usually indicates Claude API issues (token limits, etc).\033[0m"
+            echo -e "\033[31m\033[0m"
+            echo -e "\033[31mSuggested actions:\033[0m"
+            echo -e "\033[31m- Check your Claude API token limits\033[0m"
+            echo -e "\033[31m- Wait a few minutes and restart with: claudefsd dev\033[0m"
+            echo -e "\033[31m- Review logs in: logs/\033[0m"
+            echo -e "\033[31m==================================================================\033[0m"
+            exit 1
+        fi
+        
+        # Add exponential backoff delay for fast iterations
+        BACKOFF_DELAY=$((CONSECUTIVE_FAST_ITERATIONS * 60))  # 1min, 2min, 3min
+        echo -e "\033[33mApplying backoff delay: ${BACKOFF_DELAY}s\033[0m"
+        sleep $BACKOFF_DELAY
+    else
+        # Reset counter on successful iteration
+        CONSECUTIVE_FAST_ITERATIONS=0
+        echo -e "\033[32mNormal iteration timing - continuing...\033[0m"
+    fi
+
+    sleep 1
+done

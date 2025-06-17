@@ -11,12 +11,8 @@ claude-fsd is an automated development system that runs continuous AI agent-driv
 ```bash
 # Main entry points
 claude-fsd              # Interactive mode with guided setup
-claude-fsd dev          # Jump directly to development mode (auto-detects approach)
-claudefsd-dev           # Development dispatcher (routes to direct or iterative)
-
-# Development modes
-claudefsd-dev-direct    # Single-context parallel execution (small-medium projects)
-claudefsd-dev-iterative # Multi-iteration loop development (large projects)
+claude-fsd dev          # Jump directly to development mode
+claudefsd-dev           # Main development script with intelligent loop
 
 # Planning and setup
 claudefsd-interview     # Interactive expert Q&A to gather requirements (uses opus model)
@@ -39,32 +35,23 @@ The system automatically selects Claude models based on the complexity and natur
   - Standard development tasks (iterations 1, 2, 3, 5, 6, 7, etc.)
   - All three agents (Planner, Developer, Reviewer) use the same model per iteration
 
-## Development Architecture Selection
+## Development Mode
 
-The system automatically detects project complexity and chooses the appropriate development architecture:
+The system uses an intelligent development loop that combines task planning with parallel execution:
 
-### **Direct Execution Mode** (small to medium projects)
-- **Architecture**: Single-context with parallel Task agents
-- **Keywords detected**: simple, small, quick, prototype, minimal, script, tool, utility, feature, module
-- **Approach**: Anti-goldplating constraints, minimal viable solutions
-- **Best for**: Scripts, utilities, features, API modules, blueprints (≤2000 lines)
-
-### **Iterative Development Mode** (large projects)  
-- **Architecture**: Multi-cycle Planner → Developer → Reviewer → Tester loop
-- **Default**: Used for complex/ambiguous projects
-- **Approach**: Milder anti-goldplating (bulletproof but focused on plan)
-- **Best for**: Enterprise conversions, large systems, complex applications (2000+ lines)
-
-Override detection with: `claudefsd-dev direct` or `claudefsd-dev iterative`
+- **Architecture**: Intelligent task selection with parallel Task agents
+- **Features**: Loop-based with failure detection, megathinking every 4th iteration, adaptive execution
+- **Approach**: Builds bulletproof systems while staying focused on the plan
+- **Adaptability**: Automatically adjusts approach based on task complexity - can use single agent for complex sequential work or multiple parallel agents for independent tasks
 
 ## Architecture
 
-### Agent System Design
-The system uses multiple AI agents working in cycles:
-- **Planner Agent**: Analyzes docs/PLAN.md and selects next task with megathinking mode every 4th iteration
-- **Developer Agent**: Implements tasks using Claude Code with `--dangerously-skip-permissions`
-- **Reviewer Agent**: Uses Codex (if available) for static code review in background
-- **Tester Agent**: Reviews, validates, and can commit changes
+### Development Loop Design
+The system uses an intelligent development loop that:
+- **Task Selection**: Analyzes docs/PLAN.md to identify open tasks and dependencies
+- **Adaptive Execution**: Chooses between single-agent deep work or parallel Task agents based on task nature
+- **Progress Tracking**: Updates docs/PLAN.md after each iteration
+- **Megathinking**: Every 4th iteration activates opus model for architectural planning
 
 ### Key Files Structure
 ```
@@ -86,11 +73,11 @@ logs/                # AI session logs with timestamps
 ## Development Workflow
 
 ### Loop Mechanics in claudefsd-dev
-1. **Task Selection**: Planner reads docs/PLAN.md and selects next open task
-2. **Implementation**: Developer implements with extensive error checking
-3. **Review**: Parallel static review with Codex + comprehensive Claude review
-4. **Testing/Commit**: Validates changes and handles git operations
-5. **Repeat**: Continues until all tasks marked complete
+1. **Task Analysis**: Reads docs/PLAN.md and identifies all open tasks
+2. **Execution Strategy**: Chooses between single-agent deep work or parallel multi-agent execution
+3. **Implementation**: Executes tasks using selected approach with extensive error checking
+4. **Progress Update**: Updates docs/PLAN.md to mark completed tasks
+5. **Repeat**: Continues until all tasks complete or **<ALL DONE>** detected
 
 ### Megathinking Mode
 Every 4th development cycle activates architectural planning mode for high-level system design considerations.
@@ -116,3 +103,13 @@ Every 4th development cycle activates architectural planning mode for high-level
 - Tests should exercise real systems (databases, APIs) non-destructively  
 - No mocking without explicit permission
 - Lint and architecture tests run frequently during development
+
+## Common Bash Scripting Mistakes to Avoid
+- **Never use `local` outside of functions**: The `local` keyword can only be used inside bash functions. Use regular variable assignment instead.
+  ```bash
+  # WRONG (outside function):
+  local var_name=$(some_command)
+  
+  # CORRECT (outside function):
+  var_name=$(some_command)
+  ```

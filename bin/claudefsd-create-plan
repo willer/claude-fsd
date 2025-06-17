@@ -57,10 +57,12 @@ The CLAUDE-NOTES.md should contain:
 - Areas that may need future clarification
 
 The PLAN.md should contain:
-- Ordered list of development tasks with [ ] checkboxes
-- Each task should be specific and actionable
+- Master plan limited to 100 lines maximum
+- High-level sections with [ ] checkboxes for completion tracking
+- For complex projects, reference detailed sub-plans in separate files (docs/plan-section1.md, docs/plan-section2.md, etc.)
 - Include proportional infrastructure setup (basic linting + pre-commit hooks)
 - Group related tasks into logical phases
+- If the plan would exceed 100 lines, create a master plan with section references and detailed sub-plans
 
 INFRASTRUCTURE PROPORTIONALITY RULES:
 - Basic linter + pre-commit hooks: Always include for any project
@@ -112,8 +114,10 @@ Using your deep strategic reasoning, create a comprehensive project architecture
    - Long-term maintainability strategy
 
 2. IMPLEMENTATION PLAN (docs/PLAN.md):
+   - Master plan limited to 100 lines maximum with high-level sections
+   - For complex projects, create detailed sub-plans in separate files (docs/plan-section1.md, etc.)
    - Phased development approach with clear milestones
-   - Detailed task breakdown with dependencies
+   - Task breakdown with dependencies (detailed in sub-plans if needed)
    - Risk assessment for each phase
    - Testing strategy integrated into each phase
    - Infrastructure needs (proportional to project size)

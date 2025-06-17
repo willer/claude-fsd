@@ -268,6 +268,9 @@ prepare_next_question_bg() {
             if [ -f "docs/REQUIREMENTS.md" ]; then
                 existing_docs="${existing_docs}$(printf '=== EXISTING REQUIREMENTS ===\n')$(cat docs/REQUIREMENTS.md)$(printf '\n\n')"
             fi
+            if [ -f "docs/QUESTIONS.md" ]; then
+                existing_docs="${existing_docs}$(printf '=== EXISTING QUESTIONS ===\n')$(cat docs/QUESTIONS.md)$(printf '\n\n')"
+            fi
             if [ -f "docs/CLAUDE-NOTES.md" ]; then
                 existing_docs="${existing_docs}$(printf '=== EXISTING TECHNICAL NOTES ===\n')$(cat docs/CLAUDE-NOTES.md)$(printf '\n\n')"
             fi

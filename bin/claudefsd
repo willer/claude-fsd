@@ -79,9 +79,7 @@ show_menu() {
         echo "  2) [Requires interview first]"
     fi
     
-    echo "  3) Development - Choose development approach:"
-    echo "    3a) Direct execution - Single-context parallel agents (small-medium projects)"
-    echo "    3b) Iterative development - Multi-cycle planning loop (large projects)"
+    echo "  3) Development - Run automated development"
     echo "  4) Exit"
     echo
     
@@ -173,7 +171,7 @@ open_with_editor() {
 # Check dependencies first
 check_dependencies
 
-# Function to check for updates (non-blocking)
+# Function to check for updates and auto-update if needed
 check_for_updates() {
     # Only check if we can reach npm registry quickly
     if timeout 2 npm view claude-fsd version >/dev/null 2>&1; then
@@ -182,8 +180,16 @@ check_for_updates() {
         
         if [ -n "$current_version" ] && [ -n "$latest_version" ] && [ "$current_version" != "$latest_version" ]; then
             echo -e "${YELLOW}📦 Update available: claude-fsd $current_version → $latest_version${NC}"
-            echo -e "${YELLOW}   Run: npm update -g claude-fsd${NC}"
-            echo
+            echo -e "${GREEN}🔄 Auto-updating claude-fsd...${NC}"
+            
+            # Attempt automatic update
+            if npm update -g claude-fsd >/dev/null 2>&1; then
+                echo -e "${GREEN}✅ Successfully updated to claude-fsd $latest_version${NC}"
+                echo
+            else
+                echo -e "${YELLOW}⚠️  Auto-update failed. Please run manually: npm update -g claude-fsd${NC}"
+                echo
+            fi
         fi
     fi
 }
@@ -233,7 +239,7 @@ if [ $# -eq 0 ]; then
         1)
             # Interactive interview
             source "$(dirname "$0")/claudefsd-find-brief"
-            local brief_file=$(find_brief_file 2>/dev/null || echo "")
+            brief_file=$(find_brief_file 2>/dev/null || echo "")
             if [ -z "$brief_file" ]; then
                 echo -e "${RED}No BRIEF.md found. Please create a project brief first.${NC}"
                 exit 1
@@ -254,22 +260,10 @@ if [ $# -eq 0 ]; then
             fi
             ;;
         3)
-            # Auto-detect development mode
-            echo -e "${GREEN}Auto-detecting development approach...${NC}"
+            # Run development mode
+            echo -e "${GREEN}Starting development mode...${NC}"
             echo
             exec "$(dirname "$0")/claudefsd-dev"
-            ;;
-        3a)
-            # Direct execution mode
-            echo -e "${GREEN}Starting direct execution mode...${NC}"
-            echo
-            exec "$(dirname "$0")/claudefsd-dev" direct
-            ;;
-        3b)
-            # Iterative development mode
-            echo -e "${GREEN}Starting iterative development mode...${NC}"
-            echo
-            exec "$(dirname "$0")/claudefsd-dev" iterative
             ;;
         4)
             echo "Goodbye!"
@@ -295,21 +289,6 @@ else
             shift
             exec "$(dirname "$0")/claudefsd-create-plan" "$@"
             ;;
-        dev-direct)
-            # Direct CLI access to direct mode
-            shift
-            exec "$(dirname "$0")/claudefsd-dev" direct "$@"
-            ;;
-        dev-iterative)
-            # Direct CLI access to iterative mode
-            shift
-            exec "$(dirname "$0")/claudefsd-dev" iterative "$@"
-            ;;
-        dev-mini)
-            # Legacy support - redirect to direct mode
-            shift
-            exec "$(dirname "$0")/claudefsd-dev" direct "$@"
-            ;;
         *)
             echo -e "${RED}Unknown command: $1${NC}"
             echo
@@ -318,9 +297,7 @@ else
             echo "Commands:"
             echo "  interview      - Interactive requirements gathering"
             echo "  create-plan    - Create plan from requirements or questions"
-            echo "  dev|run        - Run development mode (auto-detects approach)"
-            echo "  dev-direct     - Force direct execution mode"
-            echo "  dev-iterative  - Force iterative development mode"
+            echo "  dev|run        - Run automated development mode"
             echo
             echo "Run without arguments for interactive mode."
             exit 1

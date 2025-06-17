@@ -1,14 +1,12 @@
 {
   "name": "claude-fsd",
-  "version": "1.5.3",
+  "version": "1.5.10",
   "description": "Claude Full Self Drive tools for autonomous AI-powered development",
   "bin": {
     "claude-fsd": "bin/claude-fsd",
     "claudefsd": "bin/claudefsd",
     "claudefsd-check-dependencies": "bin/claudefsd-check-dependencies",
     "claudefsd-dev": "bin/claudefsd-dev",
-    "claudefsd-dev-direct": "bin/claudefsd-dev-direct",
-    "claudefsd-dev-iterative": "bin/claudefsd-dev-iterative",
     "claudefsd-find-brief": "bin/claudefsd-find-brief",
     "claudefsd-interview": "bin/claudefsd-interview",
     "claudefsd-analyze-brief": "bin/claudefsd-analyze-brief",
