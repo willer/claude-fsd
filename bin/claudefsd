@@ -8,6 +8,19 @@ YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Parse --working-dir parameter
+WORKING_DIR="docs"
+for arg in "$@"; do
+    case $arg in
+        --working-dir=*)
+            WORKING_DIR="${arg#*=}"
+            # Remove this argument from the list
+            shift
+            ;;
+    esac
+done
+export CLAUDEFSD_WORKING_DIR="$WORKING_DIR"
+
 # Source the dependency checker
 source "$(dirname "$0")/claudefsd-check-dependencies"
 
@@ -29,11 +42,11 @@ get_default_choice() {
     source "$(dirname "$0")/claudefsd-find-brief"
     if ! find_brief_file >/dev/null 2>&1; then
         echo "0"
-    elif [ ! -f docs/REQUIREMENTS.md ] && [ ! -f docs/QUESTIONS.md ]; then
+    elif [ ! -f "$WORKING_DIR/REQUIREMENTS.md" ] && [ ! -f "$WORKING_DIR/QUESTIONS.md" ]; then
         echo "1"  # Interactive interview
-    elif [ -f docs/REQUIREMENTS.md ] && [ ! -f docs/PLAN.md ]; then
+    elif [ -f "$WORKING_DIR/REQUIREMENTS.md" ] && [ ! -f "$WORKING_DIR/PLAN.md" ]; then
         echo "2"  # Create plan from requirements
-    elif [ -f docs/QUESTIONS.md ] && [ ! -f docs/PLAN.md ]; then
+    elif [ -f "$WORKING_DIR/QUESTIONS.md" ] && [ ! -f "$WORKING_DIR/PLAN.md" ]; then
         echo "2"  # Create plan from questions
     else
         echo "3"  # Development mode
@@ -59,8 +72,8 @@ show_menu() {
     fi
     
     # Check if we should show new or old interview flow
-    if [ -f docs/INTERVIEW-SESSION.json ]; then
-        local session_status=$(jq -r '.status' docs/INTERVIEW-SESSION.json 2>/dev/null || echo "unknown")
+    if [ -f "$WORKING_DIR/INTERVIEW-SESSION.json" ]; then
+        local session_status=$(jq -r '.status' "$WORKING_DIR/INTERVIEW-SESSION.json" 2>/dev/null || echo "unknown")
         if [ "$session_status" = "in_progress" ]; then
             echo "  1) Interview - Resume existing interview session"
         else
@@ -71,9 +84,9 @@ show_menu() {
     fi
     
     # Show create plan option based on what exists
-    if [ -f docs/REQUIREMENTS.md ]; then
+    if [ -f "$WORKING_DIR/REQUIREMENTS.md" ]; then
         echo "  2) Create plan - Generate development plan from requirements"
-    elif [ -f docs/QUESTIONS.md ]; then
+    elif [ -f "$WORKING_DIR/QUESTIONS.md" ]; then
         echo "  2) Create plan - Generate plan from answered questions"
     else
         echo "  2) [Requires interview first]"
@@ -94,15 +107,15 @@ show_menu() {
     fi
     
     # Show interview session status if exists
-    if [ -f docs/INTERVIEW-SESSION.json ]; then
-        local session_status=$(jq -r '.status' docs/INTERVIEW-SESSION.json 2>/dev/null || echo "unknown")
-        local total_questions=$(jq -r '.question_count.total' docs/INTERVIEW-SESSION.json 2>/dev/null || echo "0")
+    if [ -f "$WORKING_DIR/INTERVIEW-SESSION.json" ]; then
+        local session_status=$(jq -r '.status' "$WORKING_DIR/INTERVIEW-SESSION.json" 2>/dev/null || echo "unknown")
+        local total_questions=$(jq -r '.question_count.total' "$WORKING_DIR/INTERVIEW-SESSION.json" 2>/dev/null || echo "0")
         echo "  📝 Interview session: $session_status ($total_questions questions)"
     fi
     
-    [ -f docs/REQUIREMENTS.md ] && echo "  ✓ docs/REQUIREMENTS.md exists" || echo "  ✗ docs/REQUIREMENTS.md missing"
-    [ -f docs/QUESTIONS.md ] && echo "  ✓ docs/QUESTIONS.md exists" || echo "  ✗ docs/QUESTIONS.md missing"
-    [ -f docs/PLAN.md ] && echo "  ✓ docs/PLAN.md exists" || echo "  ✗ docs/PLAN.md missing"
+    [ -f "$WORKING_DIR/REQUIREMENTS.md" ] && echo "  ✓ $WORKING_DIR/REQUIREMENTS.md exists" || echo "  ✗ $WORKING_DIR/REQUIREMENTS.md missing"
+    [ -f "$WORKING_DIR/QUESTIONS.md" ] && echo "  ✓ $WORKING_DIR/QUESTIONS.md exists" || echo "  ✗ $WORKING_DIR/QUESTIONS.md missing"
+    [ -f "$WORKING_DIR/PLAN.md" ] && echo "  ✓ $WORKING_DIR/PLAN.md exists" || echo "  ✗ $WORKING_DIR/PLAN.md missing"
     echo
 }
 
@@ -206,29 +219,29 @@ if [ $# -eq 0 ]; then
     
     case $choice in
         0)
-            # Create BRIEF.md in docs/ directory (preferred location)
+            # Create BRIEF.md in working directory (preferred location)
             if ! find_brief_file >/dev/null 2>&1; then
                 echo -e "${GREEN}Creating project brief...${NC}"
                 echo
-                mkdir -p docs
-                echo "# Project Brief" > docs/BRIEF.md
-                echo "" >> docs/BRIEF.md
-                echo "## Vision" >> docs/BRIEF.md
-                echo "Describe the big picture vision and what you want to achieve..." >> docs/BRIEF.md
-                echo "" >> docs/BRIEF.md
-                echo "## Core Requirements" >> docs/BRIEF.md
-                echo "- Core requirement 1" >> docs/BRIEF.md
-                echo "- Core requirement 2" >> docs/BRIEF.md
-                echo "" >> docs/BRIEF.md
-                echo "## Key Features" >> docs/BRIEF.md
-                echo "- Feature 1" >> docs/BRIEF.md
-                echo "- Feature 2" >> docs/BRIEF.md
-                echo "" >> docs/BRIEF.md
-                echo "## Success Criteria" >> docs/BRIEF.md
-                echo "- Success criterion 1" >> docs/BRIEF.md
-                echo "- Success criterion 2" >> docs/BRIEF.md
+                mkdir -p "$WORKING_DIR"
+                echo "# Project Brief" > "$WORKING_DIR/BRIEF.md"
+                echo "" >> "$WORKING_DIR/BRIEF.md"
+                echo "## Vision" >> "$WORKING_DIR/BRIEF.md"
+                echo "Describe the big picture vision and what you want to achieve..." >> "$WORKING_DIR/BRIEF.md"
+                echo "" >> "$WORKING_DIR/BRIEF.md"
+                echo "## Core Requirements" >> "$WORKING_DIR/BRIEF.md"
+                echo "- Core requirement 1" >> "$WORKING_DIR/BRIEF.md"
+                echo "- Core requirement 2" >> "$WORKING_DIR/BRIEF.md"
+                echo "" >> "$WORKING_DIR/BRIEF.md"
+                echo "## Key Features" >> "$WORKING_DIR/BRIEF.md"
+                echo "- Feature 1" >> "$WORKING_DIR/BRIEF.md"
+                echo "- Feature 2" >> "$WORKING_DIR/BRIEF.md"
+                echo "" >> "$WORKING_DIR/BRIEF.md"
+                echo "## Success Criteria" >> "$WORKING_DIR/BRIEF.md"
+                echo "- Success criterion 1" >> "$WORKING_DIR/BRIEF.md"
+                echo "- Success criterion 2" >> "$WORKING_DIR/BRIEF.md"
                 
-                open_with_editor "docs/BRIEF.md"
+                open_with_editor "$WORKING_DIR/BRIEF.md"
                 echo
                 echo -e "${GREEN}Brief created! Run claudefsd again to start the interview.${NC}"
             else
@@ -246,14 +259,14 @@ if [ $# -eq 0 ]; then
             fi
             echo -e "${GREEN}Starting interview...${NC}"
             echo
-            exec "$(dirname "$0")/claudefsd-interview"
+            exec "$(dirname "$0")/claudefsd-interview" --working-dir="$WORKING_DIR"
             ;;
         2)
             # Create plan - check what source to use
-            if [ -f docs/REQUIREMENTS.md ] || [ -f docs/QUESTIONS.md ]; then
+            if [ -f "$WORKING_DIR/REQUIREMENTS.md" ] || [ -f "$WORKING_DIR/QUESTIONS.md" ]; then
                 echo -e "${GREEN}Creating plan from project inputs...${NC}"
                 echo
-                exec "$(dirname "$0")/claudefsd-create-plan"
+                exec "$(dirname "$0")/claudefsd-create-plan" --working-dir="$WORKING_DIR"
             else
                 echo -e "${RED}No requirements or questions found. Please run the interview first.${NC}"
                 exit 1
@@ -263,7 +276,7 @@ if [ $# -eq 0 ]; then
             # Run development mode
             echo -e "${GREEN}Starting development mode...${NC}"
             echo
-            exec "$(dirname "$0")/claudefsd-dev"
+            exec "$(dirname "$0")/claudefsd-dev" --working-dir="$WORKING_DIR"
             ;;
         4)
             echo "Goodbye!"
@@ -279,15 +292,15 @@ else
     case "$1" in
         interview)
             shift
-            exec "$(dirname "$0")/claudefsd-interview" "$@"
+            exec "$(dirname "$0")/claudefsd-interview" --working-dir="$WORKING_DIR" "$@"
             ;;
         dev|run)
             shift
-            exec "$(dirname "$0")/claudefsd-dev" "$@"
+            exec "$(dirname "$0")/claudefsd-dev" --working-dir="$WORKING_DIR" "$@"
             ;;
         create-plan)
             shift
-            exec "$(dirname "$0")/claudefsd-create-plan" "$@"
+            exec "$(dirname "$0")/claudefsd-create-plan" --working-dir="$WORKING_DIR" "$@"
             ;;
         *)
             echo -e "${RED}Unknown command: $1${NC}"

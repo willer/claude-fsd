@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Parse --working-dir parameter
+WORKING_DIR="docs"
+for arg in "$@"; do
+    case $arg in
+        --working-dir=*)
+            WORKING_DIR="${arg#*=}"
+            ;;
+    esac
+done
+export CLAUDEFSD_WORKING_DIR="$WORKING_DIR"
+
 # Use the persona-based version for better question generation
 exec "$(dirname "$0")/claudefsd-analyze-brief-personas" "$@"
 

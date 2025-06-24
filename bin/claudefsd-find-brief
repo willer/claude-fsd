@@ -1,10 +1,13 @@
 #!/bin/bash
 
 # Function to find BRIEF.md with backwards compatibility
-# Prefers docs/BRIEF.md but falls back to root BRIEF.md
+# Prefers $WORKING_DIR/BRIEF.md but falls back to root BRIEF.md
 find_brief_file() {
-    if [ -f "docs/BRIEF.md" ]; then
-        echo "docs/BRIEF.md"
+    # Use environment variable if set, otherwise default to "docs"
+    local working_dir="${CLAUDEFSD_WORKING_DIR:-docs}"
+    
+    if [ -f "$working_dir/BRIEF.md" ]; then
+        echo "$working_dir/BRIEF.md"
     elif [ -f "BRIEF.md" ]; then
         echo "BRIEF.md"
     else

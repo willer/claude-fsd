@@ -11,6 +11,18 @@
 
 #set -e
 
+# Parse --working-dir parameter
+WORKING_DIR="docs"
+for arg in "$@"; do
+    case $arg in
+        --working-dir=*)
+            WORKING_DIR="${arg#*=}"
+            shift
+            ;;
+    esac
+done
+export CLAUDEFSD_WORKING_DIR="$WORKING_DIR"
+
 # Get the actual location of this script (resolving symlinks)
 if command -v realpath >/dev/null 2>&1; then
     SCRIPT_PATH="$(realpath "$0")"
@@ -39,12 +51,12 @@ check_requirements() {
     brief_file=$(find_brief_file 2>/dev/null || echo "")
     
     if [ -z "$brief_file" ]; then
-        echo "No BRIEF.md file found in docs/ or root directory. Please create one first."
+        echo "No BRIEF.md file found in $WORKING_DIR/ or root directory. Please create one first."
         exit 1
     fi
     
-    if [ ! -f "docs/PLAN.md" ]; then
-        echo "No docs/PLAN.md file found. Please run 'claudefsd create-plan' first."
+    if [ ! -f "$WORKING_DIR/PLAN.md" ]; then
+        echo "No $WORKING_DIR/PLAN.md file found. Please run 'claudefsd create-plan' first."
         exit 1
     fi
 }
@@ -95,10 +107,10 @@ You are an elite AI developer working in an automated development environment. Y
 
 **PROJECT CONTEXT:**
 $(source "$SCRIPT_DIR/claudefsd-find-brief" && brief_file=$(find_brief_file 2>/dev/null) && [ -n "$brief_file" ] && echo "=== PROJECT BRIEF ===" && cat "$brief_file" && echo "")
-$([ -f "docs/PLAN.md" ] && echo "=== DEVELOPMENT PLAN ===" && cat "docs/PLAN.md" && echo "")
-$([ -f "docs/REQUIREMENTS.md" ] && echo "=== REQUIREMENTS ===" && cat "docs/REQUIREMENTS.md" && echo "")
-$([ -f "docs/QUESTIONS.md" ] && echo "=== QUESTIONS ===" && cat "docs/QUESTIONS.md" && echo "")
-$([ -f "docs/CLAUDE-NOTES.md" ] && echo "=== TECHNICAL NOTES ===" && cat "docs/CLAUDE-NOTES.md" && echo "")
+$([ -f "$WORKING_DIR/PLAN.md" ] && echo "=== DEVELOPMENT PLAN ===" && cat "$WORKING_DIR/PLAN.md" && echo "")
+$([ -f "$WORKING_DIR/REQUIREMENTS.md" ] && echo "=== REQUIREMENTS ===" && cat "$WORKING_DIR/REQUIREMENTS.md" && echo "")
+$([ -f "$WORKING_DIR/QUESTIONS.md" ] && echo "=== QUESTIONS ===" && cat "$WORKING_DIR/QUESTIONS.md" && echo "")
+$([ -f "$WORKING_DIR/CLAUDE-NOTES.md" ] && echo "=== TECHNICAL NOTES ===" && cat "$WORKING_DIR/CLAUDE-NOTES.md" && echo "")
 $([ -f "README.md" ] && echo "=== README ===" && cat "README.md" && echo "")
 
 **IMPORTANT:** Before starting ANY work, you MUST read and understand:
@@ -116,7 +128,7 @@ $([ -f "README.md" ] && echo "=== README ===" && cat "README.md" && echo "")
 **YOUR MISSION:**
 
 **PHASE 1: TASK SELECTION**
-1. Read docs/PLAN.md and work through tasks in order
+1. Read $WORKING_DIR/PLAN.md and work through tasks in order
 2. If a phase references a sub-plan file, read that file as well
 3. Complete tasks in the order they appear - don't skip ahead
 4. Identify if tasks can be done in parallel
@@ -126,7 +138,7 @@ Choose the optimal approach:
 
 **Option A: Single Focus Task** (for sequential dependencies or complex architectural work)
 - Implement the next task in order using appropriate tools (Edit, Write, Bash, etc.)
-- Update docs/PLAN.md to mark task as complete with [x]
+- Update $WORKING_DIR/PLAN.md to mark task as complete with [x]
 
 **Option B: Parallel Task Execution** (for independent tasks)
 - Identify 2-4 related but independent tasks that can be done simultaneously
@@ -136,13 +148,13 @@ Choose the optimal approach:
 
 **PHASE 3: COMPLETION CHECK**
 After completing work:
-1. Update docs/PLAN.md to reflect completed tasks
+1. Update $WORKING_DIR/PLAN.md to reflect completed tasks
 2. Run any linters or tests specified in the project
 3. Report on what was accomplished and what remains
 
 **EXECUTION GUIDELINES:**
 - **BUILD BULLETPROOF**: Create robust solutions that handle edge cases
-- **STAY FOCUSED**: Only implement what's specified in docs/PLAN.md
+- **STAY FOCUSED**: Only implement what's specified in $WORKING_DIR/PLAN.md
 - **QUALITY FIRST**: Proper error handling, testing, and documentation
 - **ARCHITECTURAL THINKING**: Consider long-term maintainability
 
@@ -157,10 +169,10 @@ When using parallel Task agents, ensure each one:
 **OUTPUT FORMAT:**
 1. **<task_analysis>**: List identified open tasks and selected approach
 2. **<execution>**: Details of your ACTUAL implementation work (code written, files edited, commands run)
-3. **<plan_updates>**: How you updated docs/PLAN.md to reflect progress
+3. **<plan_updates>**: How you updated $WORKING_DIR/PLAN.md to reflect progress
 4. **<completion_check>**: Status of remaining work
 
-IMPORTANT: You must ACTUALLY IMPLEMENT tasks, not just describe what should be done. Use Edit, Write, Bash, and Task tools to complete real work. Begin by analyzing docs/PLAN.md and then IMPLEMENT the next task in order."
+IMPORTANT: You must ACTUALLY IMPLEMENT tasks, not just describe what should be done. Use Edit, Write, Bash, and Task tools to complete real work. Begin by analyzing $WORKING_DIR/PLAN.md and then IMPLEMENT the next task in order."
 
     # Save the prompt to the log file first
     echo "=== DEVELOPMENT PROMPT ===" > $LOGFILE
@@ -190,16 +202,24 @@ $DEVELOPER_OUTPUT
 1. Review what the developer claims to have done
 2. Verify the work was actually completed by checking files
 3. Look for any cheating patterns (disabled tests, silent fallbacks, etc.)
-4. Check if ALL tasks in docs/PLAN.md are now complete
+4. Create a git commit (see guidelines below)
+5. Check if ALL tasks in $WORKING_DIR/PLAN.md are now complete
 
 **VERIFICATION CHECKLIST:**
 - Did the developer actually implement code (not just analyze)?
 - Are all changes working correctly?
 - Do tests pass (if applicable)?
-- Is the task properly marked as complete in docs/PLAN.md?
+- Is the task properly marked as complete in $WORKING_DIR/PLAN.md?
+
+**GIT COMMIT GUIDELINES:**
+- If the code looks good: Definitely commit with a clear message
+- If the code has issues but isn't completely broken: Still commit (git is our backup) but note issues in commit message
+- If there are many pending changes: Always commit to avoid losing work
+- Only skip commit if changes are truly destructive/terrible
+- Use descriptive commit messages that explain what was attempted
 
 **IMPORTANT:** 
-- If you find issues, describe them clearly
+- If you find issues, describe them clearly in your review AND in the commit message
 - If ALL tasks in the entire project are complete and verified, output: <VERIFIED_ALL_DONE>
 - Otherwise, describe what still needs to be done
 
@@ -215,9 +235,9 @@ Be thorough but concise in your verification."
     # Run verifier
     time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "$VERIFIER_PROMPT" 2>&1 | tee -a $VERIFIER_LOGFILE
 
-    # Check if verifier has confirmed all tasks are complete
+    # Check if verifier has confirmed all tasks are complete (only in output section)
     set +e
-    if grep -q "<VERIFIED_ALL_DONE>" $VERIFIER_LOGFILE; then
+    if sed -n '/=== OUTPUT ===/,$p' $VERIFIER_LOGFILE | grep -q "^<VERIFIED_ALL_DONE>$"; then
         echo -e "\033[32m==================================================================\033[0m"
         echo -e "\033[32m== PROJECT COMPLETE - ALL TASKS VERIFIED!\033[0m"
         echo -e "\033[32m==================================================================\033[0m"

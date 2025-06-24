@@ -2,6 +2,18 @@
 
 set -e
 
+# Parse --working-dir parameter
+WORKING_DIR="docs"
+for arg in "$@"; do
+    case $arg in
+        --working-dir=*)
+            WORKING_DIR="${arg#*=}"
+            shift
+            ;;
+    esac
+done
+export CLAUDEFSD_WORKING_DIR="$WORKING_DIR"
+
 # Check dependencies
 $(dirname "$0")/claudefsd-check-dependencies
 
@@ -31,14 +43,14 @@ if [ ! -d "$PROMPTS_DIR" ]; then
     exit 1
 fi
 
-mkdir -p docs
+mkdir -p "$WORKING_DIR"
 mkdir -p logs
 
-# look for a brief file (prefer docs/BRIEF.md, fallback to BRIEF.md)
+# look for a brief file (prefer $WORKING_DIR/BRIEF.md, fallback to BRIEF.md)
 source "$(dirname "$0")/claudefsd-find-brief"
 BRIEF_FILE=$(find_brief_file)
 if [ $? -ne 0 ]; then
-    echo "No BRIEF.md file found in docs/ or root directory, please create one first"
+    echo "No BRIEF.md file found in $WORKING_DIR/ or root directory, please create one first"
     exit 1
 fi
 
@@ -83,7 +95,7 @@ for persona in "${PERSONA_ARRAY[@]}"; do
 done
 
 # Initialize questions file
-cat > docs/QUESTIONS.md <<EOF
+cat > "$WORKING_DIR/QUESTIONS.md" <<EOF
 # Project Questions
 
 Generated from BRIEF.md on $(date)
@@ -163,9 +175,9 @@ Output ONLY the questions, one per line, no numbering or bullets.
     QUESTIONS=$(claude --model sonnet -p "$batch_prompt" 2>/dev/null)
     
     # Add section header
-    echo "" >> docs/QUESTIONS.md
-    echo "## $display_name Questions" >> docs/QUESTIONS.md
-    echo "" >> docs/QUESTIONS.md
+    echo "" >> "$WORKING_DIR/QUESTIONS.md"
+    echo "## $display_name Questions" >> "$WORKING_DIR/QUESTIONS.md"
+    echo "" >> "$WORKING_DIR/QUESTIONS.md"
     
     # Add questions to file
     QUESTION_NUM=1
@@ -177,17 +189,17 @@ Output ONLY the questions, one per line, no numbering or bullets.
         question=$(echo "$question" | sed 's/^[0-9]*\. //' | sed 's/^- //' | sed 's/^• //')
         
         TOTAL_QUESTIONS=$((TOTAL_QUESTIONS + 1))
-        echo "### Q$TOTAL_QUESTIONS [$display_name]: $question" >> docs/QUESTIONS.md
-        echo "" >> docs/QUESTIONS.md
-        echo "_Answer:_" >> docs/QUESTIONS.md
-        echo "" >> docs/QUESTIONS.md
+        echo "### Q$TOTAL_QUESTIONS [$display_name]: $question" >> "$WORKING_DIR/QUESTIONS.md"
+        echo "" >> "$WORKING_DIR/QUESTIONS.md"
+        echo "_Answer:_" >> "$WORKING_DIR/QUESTIONS.md"
+        echo "" >> "$WORKING_DIR/QUESTIONS.md"
         
         QUESTION_NUM=$((QUESTION_NUM + 1))
     done <<< "$QUESTIONS"
 done
 
 # Add footer
-cat >> docs/QUESTIONS.md <<EOF
+cat >> "$WORKING_DIR/QUESTIONS.md" <<EOF
 ---
 
 ## Additional Context
@@ -203,5 +215,5 @@ echo -e "\033[32m===============================================================
 echo -e "\033[32m== QUESTION GENERATION COMPLETE\033[0m"
 echo -e "\033[32m==================================================================\033[0m"
 echo "Generated $TOTAL_QUESTIONS questions from ${#PERSONA_ARRAY[@]} expert personas"
-echo "Questions saved in docs/QUESTIONS.md"
+echo "Questions saved in $WORKING_DIR/QUESTIONS.md"
 echo "Please edit the file to add your answers, then run 'claudefsd create-plan'"

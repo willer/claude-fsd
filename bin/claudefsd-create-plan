@@ -2,6 +2,18 @@
 
 set -e
 
+# Parse --working-dir parameter
+WORKING_DIR="docs"
+for arg in "$@"; do
+    case $arg in
+        --working-dir=*)
+            WORKING_DIR="${arg#*=}"
+            shift
+            ;;
+    esac
+done
+export CLAUDEFSD_WORKING_DIR="$WORKING_DIR"
+
 # Check dependencies
 $(dirname "$0")/claudefsd-check-dependencies
 
@@ -11,16 +23,16 @@ mkdir -p logs
 mkdir -p tmp
 export TMPDIR=tmp/
 
-# look for required files (prefer docs/BRIEF.md, fallback to BRIEF.md)
+# look for required files (prefer $WORKING_DIR/BRIEF.md, fallback to BRIEF.md)
 source "$(dirname "$0")/claudefsd-find-brief"
 BRIEF_FILE=$(find_brief_file)
 if [ $? -ne 0 ]; then
-    echo "No BRIEF.md file found in docs/ or root directory, please create one first"
+    echo "No BRIEF.md file found in $WORKING_DIR/ or root directory, please create one first"
     exit 1
 fi
 
-if [ ! -f docs/QUESTIONS.md ] && [ ! -f docs/REQUIREMENTS.md ]; then
-    echo "No docs/QUESTIONS.md or docs/REQUIREMENTS.md found."
+if [ ! -f "$WORKING_DIR/QUESTIONS.md" ] && [ ! -f "$WORKING_DIR/REQUIREMENTS.md" ]; then
+    echo "No $WORKING_DIR/QUESTIONS.md or $WORKING_DIR/REQUIREMENTS.md found."
     echo "Please run either:"
     echo "  - 'claudefsd analyze-brief' to generate questions, or"
     echo "  - 'claudefsd interview' to conduct an interactive interview"
@@ -36,19 +48,19 @@ echo -e "\033[32m===============================================================
     prompt2="
 Read all of these documents if they exist:
 - $BRIEF_FILE -- the project brief
-- docs/QUESTIONS.md -- the project questions (with answers) from analyze-brief or interview
-- docs/REQUIREMENTS.md -- consolidated requirements from interview process
-- docs/CLAUDE-NOTES.md -- AI's working notes and understanding
-- docs/PLAN.md -- the project plan
-- docs/IDEAS.md -- the backlog of future ideas
-- docs/WEBTESTS.md -- the project web tests
+- $WORKING_DIR/QUESTIONS.md -- the project questions (with answers) from analyze-brief or interview
+- $WORKING_DIR/REQUIREMENTS.md -- consolidated requirements from interview process
+- $WORKING_DIR/CLAUDE-NOTES.md -- AI's working notes and understanding
+- $WORKING_DIR/PLAN.md -- the project plan
+- $WORKING_DIR/IDEAS.md -- the backlog of future ideas
+- $WORKING_DIR/WEBTESTS.md -- the project web tests
 - README.md -- the project README
 
 Your job, as a megathinking architect and project manager, is to create the project plan and working notes.
 
-1. Read through the BRIEF.md and any available requirements/questions (docs/QUESTIONS.md and/or docs/REQUIREMENTS.md).
-2. Update or create docs/CLAUDE-NOTES.md with your interpretation and understanding of the project.
-3. Update or create docs/PLAN.md with a detailed implementation plan based on all available inputs.
+1. Read through the BRIEF.md and any available requirements/questions ($WORKING_DIR/QUESTIONS.md and/or $WORKING_DIR/REQUIREMENTS.md).
+2. Update or create $WORKING_DIR/CLAUDE-NOTES.md with your interpretation and understanding of the project.
+3. Update or create $WORKING_DIR/PLAN.md with a detailed implementation plan based on all available inputs.
 
 The CLAUDE-NOTES.md should contain:
 - Your understanding of the project goals and requirements
@@ -59,7 +71,7 @@ The CLAUDE-NOTES.md should contain:
 The PLAN.md should contain:
 - Master plan limited to 100 lines maximum
 - High-level sections with [ ] checkboxes for completion tracking
-- For complex projects, reference detailed sub-plans in separate files (docs/plan-section1.md, docs/plan-section2.md, etc.)
+- For complex projects, reference detailed sub-plans in separate files ($WORKING_DIR/plan-section1.md, $WORKING_DIR/plan-section2.md, etc.)
 - Include proportional infrastructure setup (basic linting + pre-commit hooks)
 - Group related tasks into logical phases
 - If the plan would exceed 100 lines, create a master plan with section references and detailed sub-plans
@@ -94,17 +106,17 @@ if command -v codex >/dev/null 2>&1; then
 
 CONTEXT DOCUMENTS:
 $([ -f "$BRIEF_FILE" ] && echo "=== PROJECT BRIEF ===" && cat "$BRIEF_FILE" && echo "")
-$([ -f docs/QUESTIONS.md ] && echo "=== QUESTIONS & ANSWERS ===" && cat docs/QUESTIONS.md && echo "")
-$([ -f docs/REQUIREMENTS.md ] && echo "=== CONSOLIDATED REQUIREMENTS ===" && cat docs/REQUIREMENTS.md && echo "")
-$([ -f docs/INTERVIEW-SESSION.json ] && echo "=== INTERVIEW METADATA ===" && cat docs/INTERVIEW-SESSION.json && echo "")
-$([ -f docs/CLAUDE-NOTES.md ] && echo "=== EXISTING NOTES ===" && cat docs/CLAUDE-NOTES.md && echo "")
-$([ -f docs/IDEAS.md ] && echo "=== IDEAS BACKLOG ===" && cat docs/IDEAS.md && echo "")
+$([ -f "$WORKING_DIR/QUESTIONS.md" ] && echo "=== QUESTIONS & ANSWERS ===" && cat "$WORKING_DIR/QUESTIONS.md" && echo "")
+$([ -f "$WORKING_DIR/REQUIREMENTS.md" ] && echo "=== CONSOLIDATED REQUIREMENTS ===" && cat "$WORKING_DIR/REQUIREMENTS.md" && echo "")
+$([ -f "$WORKING_DIR/INTERVIEW-SESSION.json" ] && echo "=== INTERVIEW METADATA ===" && cat "$WORKING_DIR/INTERVIEW-SESSION.json" && echo "")
+$([ -f "$WORKING_DIR/CLAUDE-NOTES.md" ] && echo "=== EXISTING NOTES ===" && cat "$WORKING_DIR/CLAUDE-NOTES.md" && echo "")
+$([ -f "$WORKING_DIR/IDEAS.md" ] && echo "=== IDEAS BACKLOG ===" && cat "$WORKING_DIR/IDEAS.md" && echo "")
 $([ -f README.md ] && echo "=== README ===" && cat README.md && echo "")
 
 TASK:
 Using your deep strategic reasoning, create a comprehensive project architecture and implementation plan.
 
-1. ARCHITECTURAL ANALYSIS (docs/CLAUDE-NOTES.md):
+1. ARCHITECTURAL ANALYSIS ($WORKING_DIR/CLAUDE-NOTES.md):
    - System architecture and key design decisions
    - Technology stack justification
    - Critical technical challenges and mitigation strategies
@@ -113,9 +125,9 @@ Using your deep strategic reasoning, create a comprehensive project architecture
    - Security architecture
    - Long-term maintainability strategy
 
-2. IMPLEMENTATION PLAN (docs/PLAN.md):
+2. IMPLEMENTATION PLAN ($WORKING_DIR/PLAN.md):
    - Master plan limited to 100 lines maximum with high-level sections
-   - For complex projects, create detailed sub-plans in separate files (docs/plan-section1.md, etc.)
+   - For complex projects, create detailed sub-plans in separate files ($WORKING_DIR/plan-section1.md, etc.)
    - Phased development approach with clear milestones
    - Task breakdown with dependencies (detailed in sub-plans if needed)
    - Risk assessment for each phase
@@ -146,8 +158,8 @@ fi
 echo -e "\033[32m==================================================================\033[0m"
 echo -e "\033[32m== PLAN CREATION COMPLETE\033[0m"
 echo -e "\033[32m==================================================================\033[0m"
-echo "Plan created in docs/PLAN.md"
-echo "Working notes saved in docs/CLAUDE-NOTES.md"
+echo "Plan created in $WORKING_DIR/PLAN.md"
+echo "Working notes saved in $WORKING_DIR/CLAUDE-NOTES.md"
 echo "You can now run 'claudefsd dev' to start the development process."
 
 

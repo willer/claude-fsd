@@ -39,58 +39,76 @@ claude-fsd
 The system will walk you through the setup process:
 
 1. **Create a BRIEF.md** - Write a short description of what you want to build
-2. **Answer questions in QUESTIONS.md** - The AI will generate clarifying questions for you to answer
+2. **Answer questions** - The AI will generate clarifying questions for you to answer
 3. **Let it rip** - Start the automated development process
+
+### Working with Multiple Projects
+
+You can run multiple projects in the same repository using the `--working-dir` parameter:
+
+```bash
+# Default behavior (uses 'docs' directory)
+claude-fsd
+
+# Custom project directories
+claude-fsd --working-dir=frontend
+claude-fsd --working-dir=backend
+claude-fsd --working-dir=client-app/docs
+```
 
 ## Commands
 
 ### Main wrapper command
 ```bash
-claude-fsd        # Interactive mode (recommended for beginners)
-claude-fsd dev    # Jump straight into development mode
-claude-fsd plan   # Jump straight into planning mode
-claude-fsd plan-gen # Generate a new project plan
+claude-fsd                    # Interactive mode (recommended for beginners)
+claude-fsd dev                # Jump straight into development mode
+claude-fsd interview          # Interactive requirements gathering
+claude-fsd create-plan        # Generate development plan from requirements
+
+# With custom working directory
+claude-fsd --working-dir=project1 dev
+claude-fsd --working-dir=backend interview
 
 # claudefsd also works the same way
-claudefsd         # Same as claude-fsd
+claudefsd                     # Same as claude-fsd
 ```
 
 ### Individual commands (if you know what you're doing)
 
 #### claudefsd-dev
 Runs the development agent fleet. This command:
-- Reads your project plan from `docs/PLAN.md`
-- Picks the next open task
-- Assigns it to the developer agent
-- Has the code reviewed by the reviewer agent
-- Tests and commits the changes if everything looks good
+- Reads your project plan from `PLAN.md` in your working directory
+- Intelligently selects and executes tasks (single agent for complex work, parallel agents for independent tasks)
+- Has the code reviewed and tested
+- Updates the plan to track progress
 - Repeats until all tasks are done
 
-Every 4th cycle, it activates "megathinking mode" for architectural planning.
+Every 4th cycle, it activates "megathinking mode" using the Opus model for architectural planning.
 
-#### claudefsd-plan
-Interactive planning session where you work with AI to:
-- Define project requirements
-- Break down complex features into tasks
-- Prioritize and organize work
-- Update the project roadmap
+#### claudefsd-interview
+Interactive expert Q&A session that:
+- Analyzes your BRIEF.md with multiple AI personas (DBA, Architect, UX Expert, etc.)
+- Asks targeted questions to understand requirements
+- Saves answers in QUESTIONS.md and consolidated requirements in REQUIREMENTS.md
+- Supports resuming interrupted sessions
 
-#### claudefsd-plan-gen
-Generates an initial project plan from scratch based on:
-- Your project brief (`BRIEF.md`)
-- Any existing code or documentation
-- Best practices for your tech stack
+#### claudefsd-create-plan
+Generates a comprehensive development plan based on:
+- Your project brief (BRIEF.md)
+- Interview answers (QUESTIONS.md) or requirements (REQUIREMENTS.md)
+- Creates PLAN.md with prioritized tasks and CLAUDE-NOTES.md with architectural analysis
+- Uses Opus model for deep architectural thinking
 
 ## How it Works
 
-1. **Write a BRIEF.md** - Describe what you want to build
-2. **Answer AI-generated questions** in `QUESTIONS.md` 
-3. **Start the development loop** - The system automatically:
-   - Picks the next task from your plan
-   - Implements the feature
-   - Reviews the code
-   - Runs tests and commits changes
-   - Repeats until complete
+1. **Write a BRIEF.md** - Describe what you want to build in your working directory
+2. **Run the interview** - Answer AI-generated questions from domain experts
+3. **Generate the plan** - AI creates a comprehensive development roadmap
+4. **Start the development loop** - The system automatically:
+   - Analyzes all open tasks in PLAN.md
+   - Intelligently executes tasks (sequentially or in parallel)
+   - Updates the plan to track progress
+   - Repeats until all tasks are complete or **<ALL DONE>** is detected
 
 ## Monitoring Progress (Like Tesla FSD)
 
@@ -99,11 +117,11 @@ This isn't sci-fi level "sleep through the entire project" automation - it's mor
 **Recommended monitoring approach:**
 - **Run a parallel Claude session** - Open another Claude window/tab to chat about the project
 - **Check status periodically** - Ask the parallel Claude: "What's the current status of my project?"
-- **Review the plan** - Look at `docs/PLAN.md` to see what's been completed and what's next
+- **Review the plan** - Look at `PLAN.md` in your working directory to see what's been completed
 - **Watch for drift** - If the system goes off track, intervene before it gets too far
 
 **When you need to course-correct:**
-- **Update the plan** - Add urgent fixes or redirections to the top of `docs/PLAN.md`
+- **Update the plan** - Add urgent fixes or redirections to the top of `PLAN.md`
 - **Direct intervention** - Use your parallel Claude session to directly fix issues
 - **The system adapts** - claude-fsd will pick up plan changes on the next loop iteration
 
@@ -125,16 +143,33 @@ This isn't sci-fi level "sleep through the entire project" automation - it's mor
 
 ## Project Structure
 
-Your project should have:
+Default structure (using 'docs' as working directory):
 ```
 your-project/
 ├── docs/
-│   ├── PLAN.md          # The development plan (tasks to do)
+│   ├── BRIEF.md         # Project overview and requirements
+│   ├── PLAN.md          # The development plan (tasks with [ ] checkboxes)
 │   ├── CLAUDE-NOTES.md  # AI architect's analysis and notes
-│   ├── QUESTIONS.md     # Questions for clarification
-│   └── IDEAS.md         # Future ideas and improvements
+│   ├── QUESTIONS.md     # Interview questions and answers
+│   ├── REQUIREMENTS.md  # Consolidated requirements from interview
+│   ├── IDEAS.md         # Future ideas and improvements
+│   └── INTERVIEW-SESSION.json  # Interview session metadata
 ├── logs/                # Logs from each AI session
-└── BRIEF.md            # Project overview (optional)
+└── [your code files]
+```
+
+With custom working directory:
+```
+your-project/
+├── frontend/
+│   ├── BRIEF.md
+│   ├── PLAN.md
+│   └── ...
+├── backend/
+│   ├── BRIEF.md
+│   ├── PLAN.md
+│   └── ...
+└── logs/
 ```
 
 ## Tips for Success
@@ -142,8 +177,23 @@ your-project/
 1. **Keep your BRIEF.md concise** - A few clear paragraphs work better than lengthy specifications
 2. **Answer questions thoroughly** - The AI's questions help it understand your exact needs
 3. **Monitor periodically** - Check progress while it runs, especially during initial cycles
-4. **Use the plan as your steering wheel** - Update `docs/PLAN.md` to guide development direction
+4. **Use the plan as your steering wheel** - Update `PLAN.md` to guide development direction
 5. **Trust the process** - Let it run autonomously, but verify the results
+6. **Use --working-dir for multiple projects** - Run different projects in parallel by specifying different directories
+
+## Model Selection Strategy
+
+The system intelligently selects Claude models based on task complexity:
+
+- **Opus Model**: Used for complex architectural work
+  - Requirements gathering (interview)
+  - Architecture planning (create-plan)
+  - Megathinking mode (every 4th dev iteration)
+  
+- **Sonnet Model**: Used for regular development
+  - Standard development tasks
+  - Code implementation and reviews
+  - Most development iterations
 
 
 ## License

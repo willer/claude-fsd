@@ -2,6 +2,18 @@
 
 set -e
 
+# Parse --working-dir parameter
+WORKING_DIR="docs"
+for arg in "$@"; do
+    case $arg in
+        --working-dir=*)
+            WORKING_DIR="${arg#*=}"
+            shift
+            ;;
+    esac
+done
+export CLAUDEFSD_WORKING_DIR="$WORKING_DIR"
+
 # Check dependencies
 $(dirname "$0")/claudefsd-check-dependencies
 
@@ -39,23 +51,23 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # Create necessary directories
-mkdir -p docs
+mkdir -p "$WORKING_DIR"
 mkdir -p logs
 # prompts directory is part of the package, no need to create
 mkdir -p tmp
 
 # Session file paths
-SESSION_FILE="docs/INTERVIEW-SESSION.json"
-QUESTIONS_FILE="docs/QUESTIONS.md"
-REQUIREMENTS_FILE="docs/REQUIREMENTS.md"
+SESSION_FILE="$WORKING_DIR/INTERVIEW-SESSION.json"
+QUESTIONS_FILE="$WORKING_DIR/QUESTIONS.md"
+REQUIREMENTS_FILE="$WORKING_DIR/REQUIREMENTS.md"
 QUESTION_CACHE="tmp/next_question.txt"
 PERSONA_CACHE="tmp/next_persona.txt"
 
-# Check for BRIEF.md (prefer docs/BRIEF.md, fallback to BRIEF.md)
+# Check for BRIEF.md (prefer $WORKING_DIR/BRIEF.md, fallback to BRIEF.md)
 source "$(dirname "$0")/claudefsd-find-brief"
 BRIEF_FILE=$(find_brief_file)
 if [ $? -ne 0 ]; then
-    echo -e "${RED}No BRIEF.md file found in docs/ or root directory. Please create one first.${NC}"
+    echo -e "${RED}No BRIEF.md file found in $WORKING_DIR/ or root directory. Please create one first.${NC}"
     exit 1
 fi
 
@@ -262,17 +274,17 @@ prepare_next_question_bg() {
         if [ -f "$prompt_file" ]; then
             # Gather all existing project documents
             local existing_docs=""
-            if [ -f "docs/PLAN.md" ]; then
-                existing_docs="${existing_docs}$(printf '=== EXISTING PLAN ===\n')$(cat docs/PLAN.md)$(printf '\n\n')"
+            if [ -f "$WORKING_DIR/PLAN.md" ]; then
+                existing_docs="${existing_docs}$(printf '=== EXISTING PLAN ===\n')$(cat "$WORKING_DIR/PLAN.md")$(printf '\n\n')"
             fi
-            if [ -f "docs/REQUIREMENTS.md" ]; then
-                existing_docs="${existing_docs}$(printf '=== EXISTING REQUIREMENTS ===\n')$(cat docs/REQUIREMENTS.md)$(printf '\n\n')"
+            if [ -f "$WORKING_DIR/REQUIREMENTS.md" ]; then
+                existing_docs="${existing_docs}$(printf '=== EXISTING REQUIREMENTS ===\n')$(cat "$WORKING_DIR/REQUIREMENTS.md")$(printf '\n\n')"
             fi
-            if [ -f "docs/QUESTIONS.md" ]; then
-                existing_docs="${existing_docs}$(printf '=== EXISTING QUESTIONS ===\n')$(cat docs/QUESTIONS.md)$(printf '\n\n')"
+            if [ -f "$WORKING_DIR/QUESTIONS.md" ]; then
+                existing_docs="${existing_docs}$(printf '=== EXISTING QUESTIONS ===\n')$(cat "$WORKING_DIR/QUESTIONS.md")$(printf '\n\n')"
             fi
-            if [ -f "docs/CLAUDE-NOTES.md" ]; then
-                existing_docs="${existing_docs}$(printf '=== EXISTING TECHNICAL NOTES ===\n')$(cat docs/CLAUDE-NOTES.md)$(printf '\n\n')"
+            if [ -f "$WORKING_DIR/CLAUDE-NOTES.md" ]; then
+                existing_docs="${existing_docs}$(printf '=== EXISTING TECHNICAL NOTES ===\n')$(cat "$WORKING_DIR/CLAUDE-NOTES.md")$(printf '\n\n')"
             fi
             if [ -f "README.md" ]; then
                 existing_docs="${existing_docs}$(printf '=== README ===\n')$(cat README.md)$(printf '\n\n')"
