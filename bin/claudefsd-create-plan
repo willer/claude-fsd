@@ -51,7 +51,7 @@ echo -e "\033[32m== CREATING PLAN FROM PROJECT INPUTS\033[0m"
 echo -e "\033[32m==================================================================\033[0m"
 
     prompt2="
-Read all of these documents if they exist:
+Read and analyze these project files if they exist:
 - $BRIEF_FILE -- the project brief
 - $WORKING_DIR/QUESTIONS.md -- the project questions (with answers) from analyze-brief or interview
 - $WORKING_DIR/REQUIREMENTS.md -- consolidated requirements from interview process
@@ -59,7 +59,7 @@ Read all of these documents if they exist:
 - $WORKING_DIR/PLAN.md -- the project plan
 - $WORKING_DIR/IDEAS.md -- the backlog of future ideas
 - $WORKING_DIR/WEBTESTS.md -- the project web tests
-- README.md -- the project README
+- $WORKING_DIR/README.md -- the project README (if exists in working directory)
 
 Your job, as a megathinking architect and project manager, is to create the project plan and working notes.
 
@@ -106,17 +106,19 @@ if command -v codex >/dev/null 2>&1 && [ "$FAST_MODE" = false ]; then
     echo "   o3-pro excels at strategic thinking and will create a comprehensive plan."
     echo ""
     
-    # Prepare comprehensive context for o3-pro
+    # Prepare comprehensive context for o3-pro with file references
+    file_list=""
+    [ -f "$BRIEF_FILE" ] && file_list="$file_list\n- $BRIEF_FILE (project brief)"
+    [ -f "$WORKING_DIR/QUESTIONS.md" ] && file_list="$file_list\n- $WORKING_DIR/QUESTIONS.md (interview questions & answers)"
+    [ -f "$WORKING_DIR/REQUIREMENTS.md" ] && file_list="$file_list\n- $WORKING_DIR/REQUIREMENTS.md (consolidated requirements)"
+    [ -f "$WORKING_DIR/INTERVIEW-SESSION.json" ] && file_list="$file_list\n- $WORKING_DIR/INTERVIEW-SESSION.json (interview metadata)"
+    [ -f "$WORKING_DIR/CLAUDE-NOTES.md" ] && file_list="$file_list\n- $WORKING_DIR/CLAUDE-NOTES.md (existing technical notes)"
+    [ -f "$WORKING_DIR/IDEAS.md" ] && file_list="$file_list\n- $WORKING_DIR/IDEAS.md (ideas backlog)"
+    [ -f "$WORKING_DIR/README.md" ] && file_list="$file_list\n- $WORKING_DIR/README.md (project readme)"
+    
     o3_prompt="You are an elite software architect and strategic planner using o3-pro's advanced reasoning capabilities.
 
-CONTEXT DOCUMENTS:
-$([ -f "$BRIEF_FILE" ] && echo "=== PROJECT BRIEF ===" && cat "$BRIEF_FILE" && echo "")
-$([ -f "$WORKING_DIR/QUESTIONS.md" ] && echo "=== QUESTIONS & ANSWERS ===" && cat "$WORKING_DIR/QUESTIONS.md" && echo "")
-$([ -f "$WORKING_DIR/REQUIREMENTS.md" ] && echo "=== CONSOLIDATED REQUIREMENTS ===" && cat "$WORKING_DIR/REQUIREMENTS.md" && echo "")
-$([ -f "$WORKING_DIR/INTERVIEW-SESSION.json" ] && echo "=== INTERVIEW METADATA ===" && cat "$WORKING_DIR/INTERVIEW-SESSION.json" && echo "")
-$([ -f "$WORKING_DIR/CLAUDE-NOTES.md" ] && echo "=== EXISTING NOTES ===" && cat "$WORKING_DIR/CLAUDE-NOTES.md" && echo "")
-$([ -f "$WORKING_DIR/IDEAS.md" ] && echo "=== IDEAS BACKLOG ===" && cat "$WORKING_DIR/IDEAS.md" && echo "")
-$([ -f README.md ] && echo "=== README ===" && cat README.md && echo "")
+READ AND ANALYZE THESE PROJECT FILES:$file_list
 
 TASK:
 Using your deep strategic reasoning, create a comprehensive project architecture and implementation plan.

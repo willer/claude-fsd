@@ -272,30 +272,30 @@ prepare_next_question_bg() {
         esac
         
         if [ -f "$prompt_file" ]; then
-            # Gather all existing project documents
-            local existing_docs=""
+            # Build list of existing project files to reference
+            local file_references=""
             if [ -f "$WORKING_DIR/PLAN.md" ]; then
-                existing_docs="${existing_docs}$(printf '=== EXISTING PLAN ===\n')$(cat "$WORKING_DIR/PLAN.md")$(printf '\n\n')"
+                file_references="${file_references}- $WORKING_DIR/PLAN.md (existing development plan)\n"
             fi
             if [ -f "$WORKING_DIR/REQUIREMENTS.md" ]; then
-                existing_docs="${existing_docs}$(printf '=== EXISTING REQUIREMENTS ===\n')$(cat "$WORKING_DIR/REQUIREMENTS.md")$(printf '\n\n')"
+                file_references="${file_references}- $WORKING_DIR/REQUIREMENTS.md (existing requirements)\n"
             fi
             if [ -f "$WORKING_DIR/QUESTIONS.md" ]; then
-                existing_docs="${existing_docs}$(printf '=== EXISTING QUESTIONS ===\n')$(cat "$WORKING_DIR/QUESTIONS.md")$(printf '\n\n')"
+                file_references="${file_references}- $WORKING_DIR/QUESTIONS.md (existing questions)\n"
             fi
             if [ -f "$WORKING_DIR/CLAUDE-NOTES.md" ]; then
-                existing_docs="${existing_docs}$(printf '=== EXISTING TECHNICAL NOTES ===\n')$(cat "$WORKING_DIR/CLAUDE-NOTES.md")$(printf '\n\n')"
+                file_references="${file_references}- $WORKING_DIR/CLAUDE-NOTES.md (existing technical notes)\n"
             fi
-            if [ -f "README.md" ]; then
-                existing_docs="${existing_docs}$(printf '=== README ===\n')$(cat README.md)$(printf '\n\n')"
+            if [ -f "$WORKING_DIR/README.md" ]; then
+                file_references="${file_references}- $WORKING_DIR/README.md (project readme)\n"
             fi
             
             # Read prompt template
             local prompt_template=$(cat "$prompt_file")
             
-            # Add existing docs context if any exist
-            if [ -n "$existing_docs" ]; then
-                prompt_template="$(printf 'EXISTING PROJECT DOCUMENTATION:\n')${existing_docs}$(printf '\n')${prompt_template}"
+            # Add file references context if any exist
+            if [ -n "$file_references" ]; then
+                prompt_template="$(printf 'EXISTING PROJECT FILES TO READ:\n')$(printf "$file_references")$(printf '\n')${prompt_template}"
             fi
             
             # Replace tokens

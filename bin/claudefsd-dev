@@ -105,13 +105,15 @@ while true; do
     DEVELOPMENT_PROMPT="$MEGATHINKING_MODE
 You are an elite AI developer working in an automated development environment. Your job is to IMPLEMENT tasks from the project plan, not just analyze them. You can either implement tasks directly yourself or coordinate parallel Task agents for independent work.
 
-**PROJECT CONTEXT:**
-$(source "$SCRIPT_DIR/claudefsd-find-brief" && brief_file=$(find_brief_file 2>/dev/null) && [ -n "$brief_file" ] && echo "=== PROJECT BRIEF ===" && cat "$brief_file" && echo "")
-$([ -f "$WORKING_DIR/PLAN.md" ] && echo "=== DEVELOPMENT PLAN ===" && cat "$WORKING_DIR/PLAN.md" && echo "")
-$([ -f "$WORKING_DIR/REQUIREMENTS.md" ] && echo "=== REQUIREMENTS ===" && cat "$WORKING_DIR/REQUIREMENTS.md" && echo "")
-$([ -f "$WORKING_DIR/QUESTIONS.md" ] && echo "=== QUESTIONS ===" && cat "$WORKING_DIR/QUESTIONS.md" && echo "")
-$([ -f "$WORKING_DIR/CLAUDE-NOTES.md" ] && echo "=== TECHNICAL NOTES ===" && cat "$WORKING_DIR/CLAUDE-NOTES.md" && echo "")
-$([ -f "README.md" ] && echo "=== README ===" && cat "README.md" && echo "")
+**PROJECT FILES TO READ AND ANALYZE:**
+$(source "$SCRIPT_DIR/claudefsd-find-brief" && brief_file=$(find_brief_file 2>/dev/null) && [ -n "$brief_file" ] && echo "- $brief_file (project brief)")
+$([ -f "$WORKING_DIR/PLAN.md" ] && echo "- $WORKING_DIR/PLAN.md (development plan with tasks)")
+$([ -f "$WORKING_DIR/REQUIREMENTS.md" ] && echo "- $WORKING_DIR/REQUIREMENTS.md (project requirements)")
+$([ -f "$WORKING_DIR/QUESTIONS.md" ] && echo "- $WORKING_DIR/QUESTIONS.md (interview Q&A)")
+$([ -f "$WORKING_DIR/CLAUDE-NOTES.md" ] && echo "- $WORKING_DIR/CLAUDE-NOTES.md (technical notes)")
+$([ -f "$WORKING_DIR/README.md" ] && echo "- $WORKING_DIR/README.md (project readme)")
+$([ -f "CLAUDE.md" ] && echo "- CLAUDE.md (project-specific instructions)")
+$([ -f "~/.claude/CLAUDE.md" ] && echo "- ~/.claude/CLAUDE.md (global development principles)")
 
 **IMPORTANT:** Before starting ANY work, you MUST read and understand:
 1. The project's CLAUDE.md file (if it exists) - this contains project-specific instructions
