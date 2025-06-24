@@ -2,12 +2,17 @@
 
 set -e
 
-# Parse --working-dir parameter
+# Parse command line parameters
 WORKING_DIR="docs"
+FAST_MODE=false
 for arg in "$@"; do
     case $arg in
         --working-dir=*)
             WORKING_DIR="${arg#*=}"
+            shift
+            ;;
+        --fast)
+            FAST_MODE=true
             shift
             ;;
     esac
@@ -91,8 +96,8 @@ INFRASTRUCTURE PROPORTIONALITY RULES:
 echo "Running claude with opus model..."
 claude --model opus --dangerously-skip-permissions -p "$prompt2" | tee >(cat > $LOGFILE-ba3)
 
-# Only run codex if available
-if command -v codex >/dev/null 2>&1; then
+# Only run codex if available and not in fast mode
+if command -v codex >/dev/null 2>&1 && [ "$FAST_MODE" = false ]; then
     echo ""
     echo -e "\033[33m==================================================================\033[0m"
     echo -e "\033[33m== RUNNING O3-PRO FOR DEEP STRATEGIC PLANNING\033[0m"
@@ -150,9 +155,15 @@ Take your time to think deeply about the optimal approach."
     echo "✅ o3-pro strategic planning complete!"
 else
     echo ""
-    echo -e "\033[33mNote: Install 'codex' CLI to enable o3-pro strategic planning for enhanced results.\033[0m"
-    echo "Proceeding with standard planning using Claude Opus..."
-    echo "Codex not available, skipping o3-pro strategic analysis" > $LOGFILE-ba4
+    if [ "$FAST_MODE" = true ]; then
+        echo -e "\033[33m⚡ Fast mode enabled - skipping o3-pro strategic analysis for quicker results.\033[0m"
+        echo "Use 'claudefsd-create-plan' without --fast for deep o3-pro planning."
+        echo "Fast mode: skipping o3-pro strategic analysis" > $LOGFILE-ba4
+    else
+        echo -e "\033[33mNote: Install 'codex' CLI to enable o3-pro strategic planning for enhanced results.\033[0m"
+        echo "Proceeding with standard planning using Claude Opus..."
+        echo "Codex not available, skipping o3-pro strategic analysis" > $LOGFILE-ba4
+    fi
 fi
 
 echo -e "\033[32m==================================================================\033[0m"

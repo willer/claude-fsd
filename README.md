@@ -69,6 +69,10 @@ claude-fsd create-plan        # Generate development plan from requirements
 claude-fsd --working-dir=project1 dev
 claude-fsd --working-dir=backend interview
 
+# Fast mode (skips slow o3-pro planning)
+claude-fsd create-plan --fast
+claude-fsd --working-dir=project1 --fast create-plan
+
 # claudefsd also works the same way
 claudefsd                     # Same as claude-fsd
 ```
@@ -97,7 +101,8 @@ Generates a comprehensive development plan based on:
 - Your project brief (BRIEF.md)
 - Interview answers (QUESTIONS.md) or requirements (REQUIREMENTS.md)
 - Creates PLAN.md with prioritized tasks and CLAUDE-NOTES.md with architectural analysis
-- Uses Opus model for deep architectural thinking
+- Uses Opus model for standard planning, o3-pro for deep strategic analysis (when codex available)
+- Use `--fast` flag to skip o3-pro step for quicker results
 
 ## How it Works
 
@@ -183,11 +188,15 @@ your-project/
 
 ## Model Selection Strategy
 
-The system intelligently selects Claude models based on task complexity:
+The system intelligently selects AI models based on task complexity:
 
+- **o3-pro Model**: Used for the most complex strategic work (requires codex CLI)
+  - Deep architectural planning (create-plan, unless --fast used)
+  - Takes 5-15 minutes but provides exceptional strategic reasoning
+  
 - **Opus Model**: Used for complex architectural work
   - Requirements gathering (interview)
-  - Architecture planning (create-plan)
+  - Standard architecture planning (create-plan with --fast or when codex unavailable)
   - Megathinking mode (every 4th dev iteration)
   
 - **Sonnet Model**: Used for regular development
