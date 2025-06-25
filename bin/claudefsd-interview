@@ -295,7 +295,9 @@ prepare_next_question_bg() {
             
             # Add file references context if any exist
             if [ -n "$file_references" ]; then
-                prompt_template="$(printf 'EXISTING PROJECT FILES TO READ:\n')$(printf "$file_references")$(printf '\n')${prompt_template}"
+                prompt_template="EXISTING PROJECT FILES TO READ:
+${file_references}
+${prompt_template}"
             fi
             
             # Replace tokens
