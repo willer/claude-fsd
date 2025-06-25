@@ -105,19 +105,56 @@ while true; do
     DEVELOPMENT_PROMPT="$MEGATHINKING_MODE
 You are an elite AI developer working in an automated development environment. Your job is to IMPLEMENT tasks from the project plan, not just analyze them. You can either implement tasks directly yourself or coordinate parallel Task agents for independent work.
 
-**PROJECT FILES TO READ AND ANALYZE:**
-$(source "$SCRIPT_DIR/claudefsd-find-brief" && brief_file=$(find_brief_file 2>/dev/null) && [ -n "$brief_file" ] && echo "- $brief_file (project brief)")
-$([ -f "$WORKING_DIR/PLAN.md" ] && echo "- $WORKING_DIR/PLAN.md (development plan with tasks)")
-$([ -f "$WORKING_DIR/REQUIREMENTS.md" ] && echo "- $WORKING_DIR/REQUIREMENTS.md (project requirements)")
-$([ -f "$WORKING_DIR/QUESTIONS.md" ] && echo "- $WORKING_DIR/QUESTIONS.md (interview Q&A)")
-$([ -f "$WORKING_DIR/CLAUDE-NOTES.md" ] && echo "- $WORKING_DIR/CLAUDE-NOTES.md (technical notes)")
-$([ -f "$WORKING_DIR/README.md" ] && echo "- $WORKING_DIR/README.md (project readme)")
-$([ -f "CLAUDE.md" ] && echo "- CLAUDE.md (project-specific instructions)")
-$([ -f "~/.claude/CLAUDE.md" ] && echo "- ~/.claude/CLAUDE.md (global development principles)")
+**PROJECT FILES TO READ AND ANALYZE:**"
+
+    # Build file list more safely
+    source "$SCRIPT_DIR/claudefsd-find-brief"
+    brief_file=$(find_brief_file 2>/dev/null || echo "")
+    if [ -n "$brief_file" ]; then
+        DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
+- $brief_file (project brief)"
+    fi
+    
+    if [ -f "$WORKING_DIR/PLAN.md" ]; then
+        DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
+- $WORKING_DIR/PLAN.md (development plan with tasks)"
+    fi
+    
+    if [ -f "$WORKING_DIR/REQUIREMENTS.md" ]; then
+        DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
+- $WORKING_DIR/REQUIREMENTS.md (project requirements)"
+    fi
+    
+    if [ -f "$WORKING_DIR/QUESTIONS.md" ]; then
+        DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
+- $WORKING_DIR/QUESTIONS.md (interview Q&A)"
+    fi
+    
+    if [ -f "$WORKING_DIR/CLAUDE-NOTES.md" ]; then
+        DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
+- $WORKING_DIR/CLAUDE-NOTES.md (technical notes)"
+    fi
+    
+    if [ -f "$WORKING_DIR/README.md" ]; then
+        DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
+- $WORKING_DIR/README.md (project readme)"
+    fi
+    
+    if [ -f "CLAUDE.md" ]; then
+        DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
+- CLAUDE.md (project-specific instructions)"
+    fi
+    
+    if [ -f "$HOME/.claude/CLAUDE.md" ]; then
+        DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
+- $HOME/.claude/CLAUDE.md (global development principles)"
+    fi
+    
+    DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
 
 **IMPORTANT:** Before starting ANY work, you MUST read and understand:
 1. The project's CLAUDE.md file (if it exists) - this contains project-specific instructions
-2. The user's global CLAUDE.md file at ~/.claude/CLAUDE.md (if it exists) - this contains general development principles
+2. The user's global CLAUDE.md file at $HOME/.claude/CLAUDE.md (if it exists) - this contains general development principles
 3. Ensure all your work follows the architectural and development guidelines from both files
 
 **CRITICAL ANTI-PATTERNS TO AVOID (from CLAUDE.md):**
@@ -238,14 +275,12 @@ Be thorough but concise in your verification."
     time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "$VERIFIER_PROMPT" 2>&1 | tee -a $VERIFIER_LOGFILE
 
     # Check if verifier has confirmed all tasks are complete (only in output section)
-    set +e
     if sed -n '/=== OUTPUT ===/,$p' $VERIFIER_LOGFILE | grep -q "^<VERIFIED_ALL_DONE>$"; then
         echo -e "\033[32m==================================================================\033[0m"
         echo -e "\033[32m== PROJECT COMPLETE - ALL TASKS VERIFIED!\033[0m"
         echo -e "\033[32m==================================================================\033[0m"
         exit 0
     fi
-    set -e
 
     # Calculate iteration duration and check for failure patterns
     ITERATION_END_TIME=$(date +%s)
