@@ -139,6 +139,11 @@ This isn't sci-fi level "sleep through the entire project" automation - it's mor
 
 ## Project Structure
 
+**Flexible Structure:** Files can be placed in either `docs/` (default) or root directory `.`
+- System automatically detects file locations
+- Use `docs/` for larger projects to keep files organized
+- Use root `.` for smaller projects for simplicity
+
 Default structure (using 'docs' as working directory):
 ```
 your-project/
@@ -151,6 +156,16 @@ your-project/
 │   ├── IDEAS.md         # Future ideas and improvements
 │   └── INTERVIEW-SESSION.json  # Interview session metadata
 ├── logs/                # Logs from each AI session
+└── [your code files]
+```
+
+Simple structure (files in root):
+```
+your-project/
+├── BRIEF.md
+├── PLAN.md
+├── CLAUDE-NOTES.md
+├── logs/
 └── [your code files]
 ```
 

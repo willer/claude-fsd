@@ -42,11 +42,18 @@ get_default_choice() {
     source "$(dirname "$0")/claudefsd-find-brief"
     if ! find_brief_file >/dev/null 2>&1; then
         echo "0"
-    elif [ ! -f "$WORKING_DIR/REQUIREMENTS.md" ] && [ ! -f "$WORKING_DIR/QUESTIONS.md" ]; then
+    fi
+
+    # Use flexible file detection
+    local requirements_file=$(find_project_file "REQUIREMENTS.md" 2>/dev/null || echo "")
+    local questions_file=$(find_project_file "QUESTIONS.md" 2>/dev/null || echo "")
+    local plan_file=$(find_project_file "PLAN.md" 2>/dev/null || echo "")
+
+    if [ -z "$requirements_file" ] && [ -z "$questions_file" ]; then
         echo "1"  # Interactive interview
-    elif [ -f "$WORKING_DIR/REQUIREMENTS.md" ] && [ ! -f "$WORKING_DIR/PLAN.md" ]; then
+    elif [ -n "$requirements_file" ] && [ -z "$plan_file" ]; then
         echo "2"  # Create plan from requirements
-    elif [ -f "$WORKING_DIR/QUESTIONS.md" ] && [ ! -f "$WORKING_DIR/PLAN.md" ]; then
+    elif [ -n "$questions_file" ] && [ -z "$plan_file" ]; then
         echo "2"  # Create plan from questions
     else
         echo "3"  # Development mode
@@ -83,10 +90,14 @@ show_menu() {
         echo "  1) Interview - Gather requirements through expert Q&A"
     fi
     
-    # Show create plan option based on what exists
-    if [ -f "$WORKING_DIR/REQUIREMENTS.md" ]; then
+    # Show create plan option based on what exists (use flexible detection)
+    source "$(dirname "$0")/claudefsd-find-brief"
+    local requirements_file=$(find_project_file "REQUIREMENTS.md" 2>/dev/null || echo "")
+    local questions_file=$(find_project_file "QUESTIONS.md" 2>/dev/null || echo "")
+
+    if [ -n "$requirements_file" ]; then
         echo "  2) Create plan - Generate development plan from requirements"
-    elif [ -f "$WORKING_DIR/QUESTIONS.md" ]; then
+    elif [ -n "$questions_file" ]; then
         echo "  2) Create plan - Generate plan from answered questions"
     else
         echo "  2) [Requires interview first]"
@@ -113,9 +124,14 @@ show_menu() {
         echo "  📝 Interview session: $session_status ($total_questions questions)"
     fi
     
-    [ -f "$WORKING_DIR/REQUIREMENTS.md" ] && echo "  ✓ $WORKING_DIR/REQUIREMENTS.md exists" || echo "  ✗ $WORKING_DIR/REQUIREMENTS.md missing"
-    [ -f "$WORKING_DIR/QUESTIONS.md" ] && echo "  ✓ $WORKING_DIR/QUESTIONS.md exists" || echo "  ✗ $WORKING_DIR/QUESTIONS.md missing"
-    [ -f "$WORKING_DIR/PLAN.md" ] && echo "  ✓ $WORKING_DIR/PLAN.md exists" || echo "  ✗ $WORKING_DIR/PLAN.md missing"
+    # Show status with flexible file detection
+    local requirements_file=$(find_project_file "REQUIREMENTS.md" 2>/dev/null || echo "")
+    local questions_file=$(find_project_file "QUESTIONS.md" 2>/dev/null || echo "")
+    local plan_file=$(find_project_file "PLAN.md" 2>/dev/null || echo "")
+
+    [ -n "$requirements_file" ] && echo "  ✓ $requirements_file exists" || echo "  ✗ REQUIREMENTS.md missing"
+    [ -n "$questions_file" ] && echo "  ✓ $questions_file exists" || echo "  ✗ QUESTIONS.md missing"
+    [ -n "$plan_file" ] && echo "  ✓ $plan_file exists" || echo "  ✗ PLAN.md missing"
     echo
 }
 
@@ -262,8 +278,12 @@ if [ $# -eq 0 ]; then
             exec "$(dirname "$0")/claudefsd-interview" --working-dir="$WORKING_DIR"
             ;;
         2)
-            # Create plan - check what source to use
-            if [ -f "$WORKING_DIR/REQUIREMENTS.md" ] || [ -f "$WORKING_DIR/QUESTIONS.md" ]; then
+            # Create plan - check what source to use (flexible detection)
+            source "$(dirname "$0")/claudefsd-find-brief"
+            requirements_file=$(find_project_file "REQUIREMENTS.md" 2>/dev/null || echo "")
+            questions_file=$(find_project_file "QUESTIONS.md" 2>/dev/null || echo "")
+
+            if [ -n "$requirements_file" ] || [ -n "$questions_file" ]; then
                 echo -e "${GREEN}Creating plan from project inputs...${NC}"
                 echo
                 exec "$(dirname "$0")/claudefsd-create-plan" --working-dir="$WORKING_DIR"

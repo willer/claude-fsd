@@ -46,17 +46,18 @@ SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 
 # Function to check for required files
 check_requirements() {
-    # Load find_brief_file function
+    # Load file finding functions
     source "$SCRIPT_DIR/claudefsd-find-brief"
     brief_file=$(find_brief_file 2>/dev/null || echo "")
-    
+
     if [ -z "$brief_file" ]; then
         echo "No BRIEF.md file found in $WORKING_DIR/ or root directory. Please create one first."
         exit 1
     fi
-    
-    if [ ! -f "$WORKING_DIR/PLAN.md" ]; then
-        echo "No $WORKING_DIR/PLAN.md file found. Please run 'claudefsd create-plan' first."
+
+    plan_file=$(find_project_file "PLAN.md" 2>/dev/null || echo "")
+    if [ -z "$plan_file" ]; then
+        echo "No PLAN.md file found in $WORKING_DIR/ or root directory. Please run 'claudefsd create-plan' first."
         exit 1
     fi
 }
@@ -119,37 +120,43 @@ You are an elite AI developer working in an automated development environment. Y
 
 **PROJECT FILES TO READ AND ANALYZE:**"
 
-    # Build file list more safely
+    # Build file list using flexible file detection
     source "$SCRIPT_DIR/claudefsd-find-brief"
+
     brief_file=$(find_brief_file 2>/dev/null || echo "")
     if [ -n "$brief_file" ]; then
         DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
 - $brief_file (project brief)"
     fi
-    
-    if [ -f "$WORKING_DIR/PLAN.md" ]; then
+
+    plan_file=$(find_project_file "PLAN.md" 2>/dev/null || echo "")
+    if [ -n "$plan_file" ]; then
         DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
-- $WORKING_DIR/PLAN.md (development plan with tasks)"
+- $plan_file (development plan with tasks)"
     fi
-    
-    if [ -f "$WORKING_DIR/REQUIREMENTS.md" ]; then
+
+    requirements_file=$(find_project_file "REQUIREMENTS.md" 2>/dev/null || echo "")
+    if [ -n "$requirements_file" ]; then
         DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
-- $WORKING_DIR/REQUIREMENTS.md (project requirements)"
+- $requirements_file (project requirements)"
     fi
-    
-    if [ -f "$WORKING_DIR/QUESTIONS.md" ]; then
+
+    questions_file=$(find_project_file "QUESTIONS.md" 2>/dev/null || echo "")
+    if [ -n "$questions_file" ]; then
         DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
-- $WORKING_DIR/QUESTIONS.md (interview Q&A)"
+- $questions_file (interview Q&A)"
     fi
-    
-    if [ -f "$WORKING_DIR/CLAUDE-NOTES.md" ]; then
+
+    notes_file=$(find_project_file "CLAUDE-NOTES.md" 2>/dev/null || echo "")
+    if [ -n "$notes_file" ]; then
         DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
-- $WORKING_DIR/CLAUDE-NOTES.md (technical notes)"
+- $notes_file (technical notes)"
     fi
-    
-    if [ -f "$WORKING_DIR/README.md" ]; then
+
+    readme_file=$(find_project_file "README.md" 2>/dev/null || echo "")
+    if [ -n "$readme_file" ]; then
         DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
-- $WORKING_DIR/README.md (project readme)"
+- $readme_file (project readme)"
     fi
     
     if [ -f "CLAUDE.md" ]; then
@@ -179,7 +186,7 @@ You are an elite AI developer working in an automated development environment. Y
 **YOUR MISSION:**
 
 **PHASE 1: TASK SELECTION**
-1. Read $WORKING_DIR/PLAN.md and work through tasks in order
+1. Read $plan_file and work through tasks in order
 2. If a phase references a sub-plan file, read that file as well
 3. Complete tasks in the order they appear - don't skip ahead
 4. Identify if tasks can be done in parallel
@@ -189,7 +196,7 @@ Choose the optimal approach:
 
 **Option A: Single Focus Task** (for sequential dependencies or complex architectural work)
 - Implement the next task in order using appropriate tools (Edit, Write, Bash, etc.)
-- Update $WORKING_DIR/PLAN.md to mark task as complete with [x]
+- Update $plan_file to mark task as complete with [x]
 
 **Option B: Parallel Task Execution** (for independent tasks)
 - Identify 2-4 related but independent tasks that can be done simultaneously
@@ -199,13 +206,13 @@ Choose the optimal approach:
 
 **PHASE 3: COMPLETION CHECK**
 After completing work:
-1. Update $WORKING_DIR/PLAN.md to reflect completed tasks
+1. Update $plan_file to reflect completed tasks
 2. Run any linters or tests specified in the project
 3. Report on what was accomplished and what remains
 
 **EXECUTION GUIDELINES:**
 - **BUILD BULLETPROOF**: Create robust solutions that handle edge cases
-- **STAY FOCUSED**: Only implement what's specified in $WORKING_DIR/PLAN.md
+- **STAY FOCUSED**: Only implement what's specified in $plan_file
 - **QUALITY FIRST**: Proper error handling, testing, and documentation
 - **ARCHITECTURAL THINKING**: Consider long-term maintainability
 
@@ -220,10 +227,10 @@ When using parallel Task agents, ensure each one:
 **OUTPUT FORMAT:**
 1. **<task_analysis>**: List identified open tasks and selected approach
 2. **<execution>**: Details of your ACTUAL implementation work (code written, files edited, commands run)
-3. **<plan_updates>**: How you updated $WORKING_DIR/PLAN.md to reflect progress
+3. **<plan_updates>**: How you updated $plan_file to reflect progress
 4. **<completion_check>**: Status of remaining work
 
-IMPORTANT: You must ACTUALLY IMPLEMENT tasks, not just describe what should be done. Use Edit, Write, Bash, and Task tools to complete real work. Begin by analyzing $WORKING_DIR/PLAN.md and then IMPLEMENT the next task in order."
+IMPORTANT: You must ACTUALLY IMPLEMENT tasks, not just describe what should be done. Use Edit, Write, Bash, and Task tools to complete real work. Begin by analyzing $plan_file and then IMPLEMENT the next task in order."
 
     # Save the prompt to the log file first
     echo "=== DEVELOPMENT PROMPT ===" > $LOGFILE
@@ -243,7 +250,7 @@ IMPORTANT: You must ACTUALLY IMPLEMENT tasks, not just describe what should be d
     echo -e "\033[32m== REVIEWING/VERIFYING WORK\033[0m"
     echo -e "\033[32m==================================================================\033[0m"
 
-    # Define the verifier prompt
+    # Define the verifier prompt (reuse plan_file from earlier)
     VERIFIER_PROMPT="You are an expert code reviewer tasked with verifying a developer's work.
 
 **DEVELOPER'S OUTPUT:**
@@ -254,13 +261,13 @@ $DEVELOPER_OUTPUT
 2. Verify the work was actually completed by checking files
 3. Look for any cheating patterns (disabled tests, silent fallbacks, etc.)
 4. Create a git commit (see guidelines below)
-5. Check if ALL tasks in $WORKING_DIR/PLAN.md are now complete
+5. Check if ALL tasks in $plan_file are now complete
 
 **VERIFICATION CHECKLIST:**
 - Did the developer actually implement code (not just analyze)?
 - Are all changes working correctly?
 - Do tests pass (if applicable)?
-- Is the task properly marked as complete in $WORKING_DIR/PLAN.md?
+- Is the task properly marked as complete in $plan_file?
 
 **GIT COMMIT GUIDELINES:**
 - If the code looks good: Definitely commit with a clear message

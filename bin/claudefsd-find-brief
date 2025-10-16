@@ -5,11 +5,27 @@
 find_brief_file() {
     # Use environment variable if set, otherwise default to "docs"
     local working_dir="${CLAUDEFSD_WORKING_DIR:-docs}"
-    
+
     if [ -f "$working_dir/BRIEF.md" ]; then
         echo "$working_dir/BRIEF.md"
     elif [ -f "BRIEF.md" ]; then
         echo "BRIEF.md"
+    else
+        return 1
+    fi
+}
+
+# Generic function to find any file in working dir or root
+# Usage: find_project_file "PLAN.md"
+# Returns: path to file (prefers $WORKING_DIR/file, falls back to ./file)
+find_project_file() {
+    local filename="$1"
+    local working_dir="${CLAUDEFSD_WORKING_DIR:-docs}"
+
+    if [ -f "$working_dir/$filename" ]; then
+        echo "$working_dir/$filename"
+    elif [ -f "$filename" ]; then
+        echo "$filename"
     else
         return 1
     fi

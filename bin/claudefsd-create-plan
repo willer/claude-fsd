@@ -31,8 +31,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-if [ ! -f "$WORKING_DIR/QUESTIONS.md" ] && [ ! -f "$WORKING_DIR/REQUIREMENTS.md" ]; then
-    echo "No $WORKING_DIR/QUESTIONS.md or $WORKING_DIR/REQUIREMENTS.md found."
+# Check for required input files using flexible detection
+questions_file=$(find_project_file "QUESTIONS.md" 2>/dev/null || echo "")
+requirements_file=$(find_project_file "REQUIREMENTS.md" 2>/dev/null || echo "")
+
+if [ -z "$questions_file" ] && [ -z "$requirements_file" ]; then
+    echo "No QUESTIONS.md or REQUIREMENTS.md found in $WORKING_DIR/ or root directory."
     echo "Please run either:"
     echo "  - 'claudefsd analyze-brief' to generate questions, or"
     echo "  - 'claudefsd interview' to conduct an interactive interview"
@@ -45,22 +49,48 @@ echo -e "\033[32m===============================================================
 echo -e "\033[32m== CREATING PLAN FROM PROJECT INPUTS\033[0m"
 echo -e "\033[32m==================================================================\033[0m"
 
+# Build list of files to read (using flexible paths)
+plan_file=$(find_project_file "PLAN.md" 2>/dev/null || echo "")
+notes_file=$(find_project_file "CLAUDE-NOTES.md" 2>/dev/null || echo "")
+ideas_file=$(find_project_file "IDEAS.md" 2>/dev/null || echo "")
+webtests_file=$(find_project_file "WEBTESTS.md" 2>/dev/null || echo "")
+readme_file=$(find_project_file "README.md" 2>/dev/null || echo "")
+
+# Build file list for prompt
+file_list="- $BRIEF_FILE -- the project brief"
+[ -n "$questions_file" ] && file_list="$file_list
+- $questions_file -- the project questions (with answers) from analyze-brief or interview"
+[ -n "$requirements_file" ] && file_list="$file_list
+- $requirements_file -- consolidated requirements from interview process"
+[ -n "$notes_file" ] && file_list="$file_list
+- $notes_file -- AI's working notes and understanding"
+[ -n "$plan_file" ] && file_list="$file_list
+- $plan_file -- the project plan"
+[ -n "$ideas_file" ] && file_list="$file_list
+- $ideas_file -- the backlog of future ideas"
+[ -n "$webtests_file" ] && file_list="$file_list
+- $webtests_file -- the project web tests"
+[ -n "$readme_file" ] && file_list="$file_list
+- $readme_file -- the project README"
+
+# Determine output paths (prefer working dir if it exists, otherwise root)
+if [ -d "$WORKING_DIR" ] && [ "$WORKING_DIR" != "." ]; then
+    output_notes="$WORKING_DIR/CLAUDE-NOTES.md"
+    output_plan="$WORKING_DIR/PLAN.md"
+else
+    output_notes="CLAUDE-NOTES.md"
+    output_plan="PLAN.md"
+fi
+
     prompt2="
 Read and analyze these project files if they exist:
-- $BRIEF_FILE -- the project brief
-- $WORKING_DIR/QUESTIONS.md -- the project questions (with answers) from analyze-brief or interview
-- $WORKING_DIR/REQUIREMENTS.md -- consolidated requirements from interview process
-- $WORKING_DIR/CLAUDE-NOTES.md -- AI's working notes and understanding
-- $WORKING_DIR/PLAN.md -- the project plan
-- $WORKING_DIR/IDEAS.md -- the backlog of future ideas
-- $WORKING_DIR/WEBTESTS.md -- the project web tests
-- $WORKING_DIR/README.md -- the project README (if exists in working directory)
+$file_list
 
 Your job, as a megathinking architect and project manager, is to create the project plan and working notes.
 
-1. Read through the BRIEF.md and any available requirements/questions ($WORKING_DIR/QUESTIONS.md and/or $WORKING_DIR/REQUIREMENTS.md).
-2. Update or create $WORKING_DIR/CLAUDE-NOTES.md with your interpretation and understanding of the project.
-3. Update or create $WORKING_DIR/PLAN.md with a detailed implementation plan based on all available inputs.
+1. Read through the BRIEF.md and any available requirements/questions.
+2. Update or create $output_notes with your interpretation and understanding of the project.
+3. Update or create $output_plan with a detailed implementation plan based on all available inputs.
 
 The CLAUDE-NOTES.md should contain:
 - Your understanding of the project goals and requirements
@@ -71,7 +101,7 @@ The CLAUDE-NOTES.md should contain:
 The PLAN.md should contain:
 - Master plan limited to 100 lines maximum
 - High-level sections with [ ] checkboxes for completion tracking
-- For complex projects, reference detailed sub-plans in separate files ($WORKING_DIR/plan-section1.md, $WORKING_DIR/plan-section2.md, etc.)
+- For complex projects, reference detailed sub-plans in separate files (plan-section1.md, plan-section2.md, etc.)
 - Include proportional infrastructure setup (basic linting + pre-commit hooks)
 - Group related tasks into logical phases
 - If the plan would exceed 100 lines, create a master plan with section references and detailed sub-plans
@@ -109,8 +139,8 @@ claude --model sonnet --dangerously-skip-permissions -p "$prompt2" | tee >(cat >
 echo -e "\033[32m==================================================================\033[0m"
 echo -e "\033[32m== PLAN CREATION COMPLETE\033[0m"
 echo -e "\033[32m==================================================================\033[0m"
-echo "Plan created in $WORKING_DIR/PLAN.md"
-echo "Working notes saved in $WORKING_DIR/CLAUDE-NOTES.md"
+echo "Plan created in $output_plan"
+echo "Working notes saved in $output_notes"
 echo "You can now run 'claudefsd dev' to start the development process."
 
 
