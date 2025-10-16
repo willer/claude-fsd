@@ -69,10 +69,6 @@ claude-fsd create-plan        # Generate development plan from requirements
 claude-fsd --working-dir=project1 dev
 claude-fsd --working-dir=backend interview
 
-# Fast mode (skips slow o3-pro planning)
-claude-fsd create-plan --fast
-claude-fsd --working-dir=project1 --fast create-plan
-
 # claudefsd also works the same way
 claudefsd                     # Same as claude-fsd
 ```
@@ -87,7 +83,7 @@ Runs the development agent fleet. This command:
 - Updates the plan to track progress
 - Repeats until all tasks are done
 
-Every 4th cycle, it activates "megathinking mode" using the Opus model for architectural planning.
+Every 4th cycle, it activates "megathinking mode" using ultrathink for deep architectural planning.
 
 #### claudefsd-interview
 Interactive expert Q&A session that:
@@ -101,8 +97,7 @@ Generates a comprehensive development plan based on:
 - Your project brief (BRIEF.md)
 - Interview answers (QUESTIONS.md) or requirements (REQUIREMENTS.md)
 - Creates PLAN.md with prioritized tasks and CLAUDE-NOTES.md with architectural analysis
-- Uses Opus model for standard planning, o3-pro for deep strategic analysis (when codex available)
-- Use `--fast` flag to skip o3-pro step for quicker results
+- Uses Claude Sonnet with ultrathink for deep strategic planning
 
 ## How it Works
 
@@ -141,10 +136,6 @@ This isn't sci-fi level "sleep through the entire project" automation - it's mor
 - Node.js >= 14.0.0
 - Unix-like environment (macOS, Linux)
 - [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) (`claude` command)
-
-### Optional (but recommended)
-- [Codex](https://github.com/Codex-ai/codex) - For enhanced code review capabilities
-- OpenAI API key - For Codex features (set `OPENAI_API_KEY` environment variable)
 
 ## Project Structure
 
@@ -188,21 +179,18 @@ your-project/
 
 ## Model Selection Strategy
 
-The system intelligently selects AI models based on task complexity:
+The system uses Claude Sonnet throughout with strategic ultrathinking for complex work:
 
-- **o3-pro Model**: Used for the most complex strategic work (requires codex CLI)
-  - Deep architectural planning (create-plan, unless --fast used)
-  - Takes 5-15 minutes but provides exceptional strategic reasoning
-  
-- **Opus Model**: Used for complex architectural work
-  - Requirements gathering (interview)
-  - Standard architecture planning (create-plan with --fast or when codex unavailable)
+- **Sonnet + Ultrathink**: Used for complex architectural work requiring deep thinking
+  - Requirements consolidation (interview)
+  - Deep strategic planning (create-plan)
   - Megathinking mode (every 4th dev iteration)
-  
-- **Sonnet Model**: Used for regular development
+
+- **Sonnet (Standard)**: Used for regular development
   - Standard development tasks
   - Code implementation and reviews
   - Most development iterations
+  - Question generation in interview
 
 
 ## License

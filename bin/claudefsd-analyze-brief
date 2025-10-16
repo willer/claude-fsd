@@ -16,7 +16,7 @@ exec "$(dirname "$0")/claudefsd-analyze-brief-personas" "$@"
 
 mkdir -p logs
 
-# Use a temporary directory for tmp files, as codex is sandboxed to this directory
+# Use a temporary directory for tmp files
 mkdir -p tmp
 export TMPDIR=tmp/
 
@@ -48,7 +48,7 @@ Read all of these documents if they exist:
 - docs/WEBTESTS.md -- the project web tests
 - README.md -- the project README
 
-Your job, as a megathinker business analyst, is to analyze the project brief and generate clarifying questions.
+Your job, as an ultrathinker business analyst, is to analyze the project brief and generate clarifying questions.
 
 1. Read through the BRIEF.md and any existing documents to understand the project.
 2. Generate 10-15 relevant questions to clarify ambiguous aspects of the brief.
@@ -67,17 +67,8 @@ DO NOT answer the questions yourself - just generate them for the user to answer
 "
 
 # run BA's
-echo "Running claude with opus model..."
-claude --model opus --dangerously-skip-permissions -p "$prompt1" | tee >(cat > $LOGFILE-ba1)
-
-# Only run codex if available
-if command -v codex >/dev/null 2>&1; then
-    echo "Running codex o3 (results won't display)..."
-    codex -m o3 --full-auto -q "$prompt1" > $LOGFILE-ba2
-else
-    echo "Warning: codex not found, skipping enhanced analysis"
-    echo "Codex not available, skipping o3 analysis" > $LOGFILE-ba2
-fi
+echo "Running claude with sonnet model with ultrathink..."
+claude --model sonnet --dangerously-skip-permissions -p "$prompt1" | tee >(cat > $LOGFILE-ba1)
 
 echo -e "\033[32m==================================================================\033[0m"
 echo -e "\033[32m== ANALYSIS COMPLETE\033[0m"

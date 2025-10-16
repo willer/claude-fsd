@@ -384,7 +384,7 @@ Create a comprehensive requirements document that:
 Format the output as a clean, well-structured markdown document suitable for feeding into project planning.
 "
     
-    claude --model opus -p "$consolidation_prompt" > "$REQUIREMENTS_FILE"
+    claude --model sonnet -p "$consolidation_prompt" > "$REQUIREMENTS_FILE"
     
     echo -e "${GREEN}Requirements consolidated in $REQUIREMENTS_FILE${NC}"
     

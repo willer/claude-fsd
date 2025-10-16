@@ -15,8 +15,8 @@ claude-fsd dev          # Jump directly to development mode
 claudefsd-dev           # Main development script with intelligent loop
 
 # Planning and setup
-claudefsd-interview     # Interactive expert Q&A to gather requirements (uses opus model)
-claudefsd-create-plan   # Create development plan from interview results (uses opus model)
+claudefsd-interview     # Interactive expert Q&A to gather requirements (uses sonnet with ultrathink)
+claudefsd-create-plan   # Create development plan from interview results (uses sonnet with ultrathink)
 
 # Testing and validation
 ./test-failure-detection.sh  # Test failure detection mechanisms
@@ -24,16 +24,16 @@ claudefsd-create-plan   # Create development plan from interview results (uses o
 
 ## Model Selection Strategy
 
-The system automatically selects Claude models based on the complexity and nature of each task:
+The system uses Claude Sonnet throughout with strategic ultrathinking for complex work:
 
-- **Opus Model**: Used for complex architectural work requiring deep thinking
+- **Sonnet + Ultrathink**: Used for complex architectural work requiring deep thinking
   - Requirements gathering (`claudefsd-interview`)
   - Architecture planning (`claudefsd-create-plan`)
   - Megathinking mode (every 4th iteration in development cycle)
-  
-- **Sonnet Model**: Used for regular development iterations
+
+- **Sonnet (Standard)**: Used for regular development iterations
   - Standard development tasks (iterations 1, 2, 3, 5, 6, 7, etc.)
-  - All three agents (Planner, Developer, Reviewer) use the same model per iteration
+  - All agents (Planner, Developer, Reviewer) use sonnet consistently
 
 ## Development Mode
 
@@ -51,7 +51,7 @@ The system uses an intelligent development loop that:
 - **Task Selection**: Analyzes docs/PLAN.md to identify open tasks and dependencies
 - **Adaptive Execution**: Chooses between single-agent deep work or parallel Task agents based on task nature
 - **Progress Tracking**: Updates docs/PLAN.md after each iteration
-- **Megathinking**: Every 4th iteration activates opus model for architectural planning
+- **Megathinking**: Every 4th iteration activates ultrathink mode for architectural planning
 
 ### Key Files Structure
 ```
@@ -80,7 +80,7 @@ logs/                # AI session logs with timestamps
 5. **Repeat**: Continues until all tasks complete or **<ALL DONE>** detected
 
 ### Megathinking Mode
-Every 4th development cycle activates architectural planning mode for high-level system design considerations.
+Every 4th development cycle activates ultrathink mode with extended reasoning for architectural planning and high-level system design considerations.
 
 ## Error Handling Philosophy
 - **No cheating patterns**: Never disable tests, exclude files from compilation, or use silent fallbacks
@@ -89,9 +89,7 @@ Every 4th development cycle activates architectural planning mode for high-level
 - **Defensive programming**: All edge cases must throw proper exceptions
 
 ## Dependencies
-- **Required**: `claude` command (Claude CLI)
-- **Optional**: `codex` command for enhanced code review
-- **Optional**: OPENAI_API_KEY environment variable for Codex features
+- **Required**: `claude` command (Claude CLI) - this is the only dependency needed
 
 ## Git Branch Strategy
 - Stays on current branch if it's a proper feature branch

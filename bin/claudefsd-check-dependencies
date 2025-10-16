@@ -13,26 +13,13 @@ command_exists() {
 
 # Function to check dependencies
 check_dependencies() {
-    local check_codex=${1:-true}  # Check codex by default
     local missing_deps=()
-    local warnings=()
-    
-    # Check for claude
+
+    # Check for claude (only required dependency)
     if ! command_exists claude; then
         missing_deps+=("claude")
     fi
-    
-    # Check for codex (optional but recommended)
-    if [ "$check_codex" = true ] && ! command_exists codex; then
-        warnings+=("codex is not installed. Some review features will be unavailable.")
-    fi
-    
-    # Check for OPENAI_API_KEY (optional for codex)
-    if [ "$check_codex" = true ] && [ -z "${OPENAI_API_KEY:-}" ]; then
-        warnings+=("OPENAI_API_KEY is not set. Codex features will be limited.")
-        warnings+=("Set it with: export OPENAI_API_KEY='your-key-here'")
-    fi
-    
+
     # Show critical errors
     if [ ${#missing_deps[@]} -ne 0 ]; then
         echo -e "${RED}❌ Missing required dependencies:${NC}"
@@ -44,15 +31,6 @@ check_dependencies() {
         done
         echo
         exit 1
-    fi
-    
-    # Show warnings
-    if [ ${#warnings[@]} -ne 0 ]; then
-        echo -e "${YELLOW}⚠️  Optional dependencies:${NC}"
-        for warning in "${warnings[@]}"; do
-            echo -e "  - $warning"
-        done
-        echo
     fi
 }
 

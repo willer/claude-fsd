@@ -94,8 +94,20 @@ while true; do
     if [ $((LOOP_COUNTER % 4)) -eq 0 ]; then
         echo -e "\033[33m**** MEGATHINKING MODE ACTIVATED ****\033[0m"
         echo -e "\033[33mThis is your 4th development cycle. Taking a step back for architectural planning.\033[0m"
-        MEGATHINKING_MODE="**** MEGATHINKING MODE ACTIVATED ****\nThis is your 4th development cycle. Before proceeding with the next task, please take a step back and use megathinking mode to architecturally plan the next phase of development. Consider the overall structure of the codebase, potential refactoring opportunities, design patterns, technical debt, and how the current work connects to broader project goals.\n\n"
-        CLAUDE_MODEL="opus"
+        MEGATHINKING_MODE="<ultrathink>
+**** MEGATHINKING MODE ACTIVATED ****
+This is your 4th development cycle. Before proceeding with the next task, engage in deep extended reasoning to:
+- Take a step back and architecturally plan the next phase of development
+- Consider the overall structure of the codebase
+- Identify potential refactoring opportunities
+- Evaluate design patterns and technical debt
+- Think about how the current work connects to broader project goals
+- Analyze edge cases and potential failure modes
+Take your time to think deeply about the optimal approach before proceeding.
+</ultrathink>
+
+"
+        CLAUDE_MODEL="sonnet"
     else
         MEGATHINKING_MODE=""
         CLAUDE_MODEL="sonnet"

@@ -10,16 +10,11 @@ NC='\033[0m' # No Color
 
 # Parse command line parameters
 WORKING_DIR="docs"
-FAST_MODE=""
 for arg in "$@"; do
     case $arg in
         --working-dir=*)
             WORKING_DIR="${arg#*=}"
             # Remove this argument from the list
-            shift
-            ;;
-        --fast)
-            FAST_MODE="--fast"
             shift
             ;;
     esac
@@ -271,7 +266,7 @@ if [ $# -eq 0 ]; then
             if [ -f "$WORKING_DIR/REQUIREMENTS.md" ] || [ -f "$WORKING_DIR/QUESTIONS.md" ]; then
                 echo -e "${GREEN}Creating plan from project inputs...${NC}"
                 echo
-                exec "$(dirname "$0")/claudefsd-create-plan" --working-dir="$WORKING_DIR" $FAST_MODE
+                exec "$(dirname "$0")/claudefsd-create-plan" --working-dir="$WORKING_DIR"
             else
                 echo -e "${RED}No requirements or questions found. Please run the interview first.${NC}"
                 exit 1

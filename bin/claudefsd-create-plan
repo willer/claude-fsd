@@ -4,15 +4,10 @@ set -e
 
 # Parse command line parameters
 WORKING_DIR="docs"
-FAST_MODE=false
 for arg in "$@"; do
     case $arg in
         --working-dir=*)
             WORKING_DIR="${arg#*=}"
-            shift
-            ;;
-        --fast)
-            FAST_MODE=true
             shift
             ;;
     esac
@@ -24,7 +19,7 @@ $(dirname "$0")/claudefsd-check-dependencies
 
 mkdir -p logs
 
-# Use a temporary directory for tmp files, as codex is sandboxed to this directory
+# Use a temporary directory for tmp files
 mkdir -p tmp
 export TMPDIR=tmp/
 
@@ -92,81 +87,24 @@ INFRASTRUCTURE PROPORTIONALITY RULES:
 - Choose infrastructure complexity appropriate to solution size
 "
 
-# run BA's
-echo "Running claude with opus model..."
-claude --model opus --dangerously-skip-permissions -p "$prompt2" | tee >(cat > $LOGFILE-ba3)
+# Add ultrathink instruction to the beginning
+ultrathink_instruction="<ultrathink>
+You are entering deep strategic planning mode. Before responding, engage in extended reasoning to:
+- Analyze the full scope and implications of the project
+- Consider architectural tradeoffs and long-term consequences
+- Identify edge cases, failure modes, and technical risks
+- Think through the optimal approach from multiple angles
+Take your time to think deeply about the best solution before generating your plan.
+</ultrathink>
 
-# Only run codex if available and not in fast mode
-if command -v codex >/dev/null 2>&1 && [ "$FAST_MODE" = false ]; then
-    echo ""
-    echo -e "\033[33m==================================================================\033[0m"
-    echo -e "\033[33m== RUNNING O3-PRO FOR DEEP STRATEGIC PLANNING\033[0m"
-    echo -e "\033[33m==================================================================\033[0m"
-    echo "⏳ This will take several minutes as o3-pro deeply analyzes the project..."
-    echo "   o3-pro excels at strategic thinking and will create a comprehensive plan."
-    echo ""
-    
-    # Prepare comprehensive context for o3-pro with file references
-    file_list=""
-    [ -f "$BRIEF_FILE" ] && file_list="$file_list\n- $BRIEF_FILE (project brief)"
-    [ -f "$WORKING_DIR/QUESTIONS.md" ] && file_list="$file_list\n- $WORKING_DIR/QUESTIONS.md (interview questions & answers)"
-    [ -f "$WORKING_DIR/REQUIREMENTS.md" ] && file_list="$file_list\n- $WORKING_DIR/REQUIREMENTS.md (consolidated requirements)"
-    [ -f "$WORKING_DIR/INTERVIEW-SESSION.json" ] && file_list="$file_list\n- $WORKING_DIR/INTERVIEW-SESSION.json (interview metadata)"
-    [ -f "$WORKING_DIR/CLAUDE-NOTES.md" ] && file_list="$file_list\n- $WORKING_DIR/CLAUDE-NOTES.md (existing technical notes)"
-    [ -f "$WORKING_DIR/IDEAS.md" ] && file_list="$file_list\n- $WORKING_DIR/IDEAS.md (ideas backlog)"
-    [ -f "$WORKING_DIR/README.md" ] && file_list="$file_list\n- $WORKING_DIR/README.md (project readme)"
-    
-    o3_prompt="You are an elite software architect and strategic planner using o3-pro's advanced reasoning capabilities.
+"
 
-READ AND ANALYZE THESE PROJECT FILES:$file_list
+# Prepend ultrathink to the prompt
+prompt2="$ultrathink_instruction$prompt2"
 
-TASK:
-Using your deep strategic reasoning, create a comprehensive project architecture and implementation plan.
-
-1. ARCHITECTURAL ANALYSIS ($WORKING_DIR/CLAUDE-NOTES.md):
-   - System architecture and key design decisions
-   - Technology stack justification
-   - Critical technical challenges and mitigation strategies
-   - Integration points and dependencies
-   - Performance and scalability considerations
-   - Security architecture
-   - Long-term maintainability strategy
-
-2. IMPLEMENTATION PLAN ($WORKING_DIR/PLAN.md):
-   - Master plan limited to 100 lines maximum with high-level sections
-   - For complex projects, create detailed sub-plans in separate files ($WORKING_DIR/plan-section1.md, etc.)
-   - Phased development approach with clear milestones
-   - Task breakdown with dependencies (detailed in sub-plans if needed)
-   - Risk assessment for each phase
-   - Testing strategy integrated into each phase
-   - Infrastructure needs (proportional to project size)
-   - Performance benchmarks and acceptance criteria
-
-Remember:
-- Think strategically about the entire system lifecycle
-- Consider edge cases and failure modes
-- Plan for iterative development and feedback loops
-- Keep infrastructure proportional to project complexity
-- Prioritize robustness and maintainability
-
-Take your time to think deeply about the optimal approach."
-
-    echo "Running codex o3-pro (this may take 3-5 minutes)..."
-    codex -m o3-pro --full-auto -q "$o3_prompt" | tee $LOGFILE-ba4
-    echo ""
-    echo "✅ o3-pro strategic planning complete!"
-else
-    echo ""
-    if [ "$FAST_MODE" = true ]; then
-        echo -e "\033[33m⚡ Fast mode enabled - skipping o3-pro strategic analysis for quicker results.\033[0m"
-        echo "Use 'claudefsd-create-plan' without --fast for deep o3-pro planning."
-        echo "Fast mode: skipping o3-pro strategic analysis" > $LOGFILE-ba4
-    else
-        echo -e "\033[33mNote: Install 'codex' CLI to enable o3-pro strategic planning for enhanced results.\033[0m"
-        echo "Proceeding with standard planning using Claude Opus..."
-        echo "Codex not available, skipping o3-pro strategic analysis" > $LOGFILE-ba4
-    fi
-fi
+# Run planning with sonnet + ultrathink
+echo "Running claude with sonnet model (ultrathink mode)..."
+claude --model sonnet --dangerously-skip-permissions -p "$prompt2" | tee >(cat > $LOGFILE-ba3)
 
 echo -e "\033[32m==================================================================\033[0m"
 echo -e "\033[32m== PLAN CREATION COMPLETE\033[0m"
