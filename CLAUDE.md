@@ -44,6 +44,32 @@ The system uses an intelligent development loop that combines task planning with
 - **Approach**: Builds bulletproof systems while staying focused on the plan
 - **Adaptability**: Automatically adjusts approach based on task complexity - can use single agent for complex sequential work or multiple parallel agents for independent tasks
 
+### Command Line Options
+
+```bash
+claudefsd-dev [--working-dir=DIR] [--max-time=MINUTES]
+```
+
+- `--working-dir=DIR` - Directory containing BRIEF.md and PLAN.md (default: `docs`)
+- `--max-time=MINUTES` - Maximum total runtime in minutes (default: `120`)
+
+### @STOP Checkpoint Marker
+
+Add `@STOP` on its own line in PLAN.md to create a checkpoint. When all tasks before `@STOP` are complete, the system pauses for human review, deployment, or intervention. To continue, remove or move the `@STOP` marker and restart.
+
+Example:
+```markdown
+## Phase 1: Core Implementation
+- [x] Set up project structure
+- [x] Implement database models
+
+@STOP
+
+## Phase 2: Integration (requires Phase 1 deployment)
+- [ ] Add API endpoints
+- [ ] Connect to external services
+```
+
 ## Architecture
 
 ### Development Loop Design

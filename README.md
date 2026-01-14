@@ -83,7 +83,13 @@ Runs the development agent fleet. This command:
 - Updates the plan to track progress
 - Repeats until all tasks are done
 
+Options:
+- `--max-time=MINUTES` - Maximum total runtime (default: 120 minutes)
+- `--working-dir=DIR` - Directory containing BRIEF.md and PLAN.md (default: docs)
+
 Every 4th cycle, it activates "megathinking mode" using ultrathink for deep architectural planning.
+
+**@STOP Checkpoint**: Add `@STOP` on its own line in PLAN.md to pause when all preceding tasks complete. Useful for human review or deployment gates.
 
 #### claudefsd-interview
 Interactive expert Q&A session that:

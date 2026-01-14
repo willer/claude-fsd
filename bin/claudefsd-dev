@@ -1,27 +1,42 @@
 #!/bin/bash
 #
 # Main development mode - intelligent task selection with parallel execution
-# Usage: claudefsd-dev
+# Usage: claudefsd-dev [--working-dir=DIR] [--max-time=MINUTES]
+#
+# Options:
+#   --working-dir=DIR    Directory containing BRIEF.md and PLAN.md (default: docs)
+#   --max-time=MINUTES   Maximum total runtime in minutes (default: 120)
 #
 # Features:
 # - Fail-fast loop detection and "all done" prompt from iterative mode
 # - Direct parallel Task agent execution from direct mode
 # - Intelligent task planning and coordination
+# - @STOP marker support: stops when all tasks before @STOP are complete
+# - Max runtime limit to prevent runaway sessions
 #
 
 #set -e
 
-# Parse --working-dir parameter
+# Parse command line parameters
 WORKING_DIR="docs"
+MAX_TIME_MINUTES=120
 for arg in "$@"; do
     case $arg in
         --working-dir=*)
             WORKING_DIR="${arg#*=}"
             shift
             ;;
+        --max-time=*)
+            MAX_TIME_MINUTES="${arg#*=}"
+            shift
+            ;;
     esac
 done
 export CLAUDEFSD_WORKING_DIR="$WORKING_DIR"
+
+# Convert max time to seconds and record start time
+MAX_TIME_SECONDS=$((MAX_TIME_MINUTES * 60))
+OVERALL_START_TIME=$(date +%s)
 
 # Get the actual location of this script (resolving symlinks)
 if command -v realpath >/dev/null 2>&1; then
@@ -300,6 +315,38 @@ Be thorough but concise in your verification."
         echo -e "\033[32m==================================================================\033[0m"
         exit 0
     fi
+
+    # Check for @STOP marker in plan file - if all tasks before @STOP are complete, pause for human review
+    if [ -n "$plan_file" ] && grep -q "@STOP" "$plan_file"; then
+        # Extract content before @STOP and check if any tasks are incomplete
+        BEFORE_STOP=$(sed -n '1,/@STOP/p' "$plan_file")
+        # Check for incomplete tasks ([ ] or - [ ]) before @STOP
+        if ! echo "$BEFORE_STOP" | grep -qE '\[ \]'; then
+            echo -e "\033[33m==================================================================\033[0m"
+            echo -e "\033[33m== @STOP CHECKPOINT REACHED\033[0m"
+            echo -e "\033[33m==================================================================\033[0m"
+            echo -e "\033[33mAll tasks before @STOP marker are complete.\033[0m"
+            echo -e "\033[33mPausing for human review/deployment/intervention.\033[0m"
+            echo -e "\033[33mTo continue: remove or move @STOP in $plan_file, then restart.\033[0m"
+            echo -e "\033[33m==================================================================\033[0m"
+            exit 0
+        fi
+    fi
+
+    # Check if max runtime has been exceeded
+    CURRENT_TIME=$(date +%s)
+    ELAPSED_SECONDS=$((CURRENT_TIME - OVERALL_START_TIME))
+    ELAPSED_MINUTES=$((ELAPSED_SECONDS / 60))
+    if [ $ELAPSED_SECONDS -ge $MAX_TIME_SECONDS ]; then
+        echo -e "\033[33m==================================================================\033[0m"
+        echo -e "\033[33m== MAX RUNTIME REACHED (${ELAPSED_MINUTES}m / ${MAX_TIME_MINUTES}m)\033[0m"
+        echo -e "\033[33m==================================================================\033[0m"
+        echo -e "\033[33mStopping after ${MAX_TIME_MINUTES} minutes as configured.\033[0m"
+        echo -e "\033[33mTo continue: restart with 'claudefsd dev' or increase --max-time\033[0m"
+        echo -e "\033[33m==================================================================\033[0m"
+        exit 0
+    fi
+    echo -e "\033[36mTotal runtime: ${ELAPSED_MINUTES}m / ${MAX_TIME_MINUTES}m\033[0m"
 
     # Calculate iteration duration and check for failure patterns
     ITERATION_END_TIME=$(date +%s)
