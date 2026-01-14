@@ -7,6 +7,8 @@
 # - Fail-fast loop detection and "all done" prompt from iterative mode
 # - Direct parallel Task agent execution from direct mode
 # - Intelligent task planning and coordination
+# - Human intervention: PAUSE file, FEEDBACK.md injection
+# - Separate Tester agent for running tests
 #
 
 #set -e
@@ -168,13 +170,21 @@ You are an elite AI developer working in an automated development environment. Y
         DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
 - $HOME/.claude/CLAUDE.md (global development principles)"
     fi
-    
+
+    # Check for human feedback file
+    feedback_file=$(find_project_file "FEEDBACK.md" 2>/dev/null || echo "")
+    if [ -n "$feedback_file" ]; then
+        DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
+- $feedback_file (URGENT: Human feedback requiring immediate attention)"
+    fi
+
     DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
 
 **IMPORTANT:** Before starting ANY work, you MUST read and understand:
 1. The project's CLAUDE.md file (if it exists) - this contains project-specific instructions
-2. The user's global CLAUDE.md file at $HOME/.claude/CLAUDE.md (if it exists) - this contains general development principles
-3. Ensure all your work follows the architectural and development guidelines from both files
+2. The user's global CLAUDE.md file at \$HOME/.claude/CLAUDE.md (if it exists) - this contains general development principles
+3. If FEEDBACK.md exists, READ IT FIRST - it contains urgent human feedback that takes priority
+4. Ensure all your work follows the architectural and development guidelines from both files
 
 **CRITICAL ANTI-PATTERNS TO AVOID (from CLAUDE.md):**
 - NO CHEATING: Never disable tests, exclude files from compilation, or use silent fallbacks
@@ -247,6 +257,70 @@ IMPORTANT: You must ACTUALLY IMPLEMENT tasks, not just describe what should be d
     DEVELOPER_OUTPUT=$(sed -n '/=== OUTPUT ===/,$p' $LOGFILE)
 
     echo -e "\033[32m==================================================================\033[0m"
+    echo -e "\033[32m== TESTING PHASE\033[0m"
+    echo -e "\033[32m==================================================================\033[0m"
+
+    # Define the tester prompt
+    TESTER_PROMPT="You are an expert QA engineer tasked with testing the developer's work.
+
+**DEVELOPER'S OUTPUT:**
+$DEVELOPER_OUTPUT
+
+**PROJECT FILES:**
+- $plan_file (development plan - check for '## Test Criteria' or '## Acceptance Tests' section)
+- CLAUDE.md (if exists - check for test commands)
+
+**TWO TYPES OF TESTING:**
+
+1. **ITERATION TESTS** (run every time):
+   - Unit tests, linters, type checks, syntax validation
+   - Quick feedback on the current change
+   - These should pass before moving forward
+
+2. **ACCEPTANCE TESTS** (check for completion):
+   - Defined in PLAN.md under '## Test Criteria' or '## Acceptance Tests'
+   - Integration tests, E2E tests, manual verification steps
+   - When ALL acceptance tests pass, the project may be complete
+
+**YOUR TASKS:**
+1. Run ITERATION TESTS first (linters, unit tests, build checks)
+2. If iteration tests pass, check ACCEPTANCE TESTS from PLAN.md
+3. Report both separately so reviewer knows the difference
+
+**ITERATION TEST CHECKLIST:**
+- Run any existing test suites (npm test, pytest, cargo test, etc.)
+- Run linters if configured (eslint, pylint, shellcheck, etc.)
+- Check for syntax errors in modified files
+- Verify imports/dependencies are satisfied
+- For web projects: check if the app builds successfully
+
+**OUTPUT FORMAT:**
+Report your findings as:
+- **<iteration_tests>**: Quick tests run on current changes (PASS/FAIL)
+- **<iteration_details>**: What passed/failed in iteration tests
+- **<acceptance_tests>**: Status of acceptance criteria from PLAN.md (PASS/FAIL/NOT_RUN)
+- **<acceptance_details>**: Which acceptance criteria passed or failed
+- **<issues_found>**: Any problems discovered
+- **<all_acceptance_passed>**: YES or NO - are ALL acceptance tests passing?
+
+If tests fail, clearly describe what failed and why. The reviewer will use this to decide next steps.
+"
+
+    TESTER_LOGFILE="${LOGFILE}-tester"
+    echo "=== TESTER PROMPT ===" > $TESTER_LOGFILE
+    echo "$TESTER_PROMPT" >> $TESTER_LOGFILE
+    echo "=== END PROMPT ===" >> $TESTER_LOGFILE
+    echo "" >> $TESTER_LOGFILE
+    echo "=== OUTPUT ===" >> $TESTER_LOGFILE
+
+    # Run tester
+    echo "Running tester with $CLAUDE_MODEL model..."
+    time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "$TESTER_PROMPT" 2>&1 | tee -a $TESTER_LOGFILE
+
+    # Extract tester output for the reviewer
+    TESTER_OUTPUT=$(sed -n '/=== OUTPUT ===/,$p' $TESTER_LOGFILE)
+
+    echo -e "\033[32m==================================================================\033[0m"
     echo -e "\033[32m== REVIEWING/VERIFYING WORK\033[0m"
     echo -e "\033[32m==================================================================\033[0m"
 
@@ -256,17 +330,21 @@ IMPORTANT: You must ACTUALLY IMPLEMENT tasks, not just describe what should be d
 **DEVELOPER'S OUTPUT:**
 $DEVELOPER_OUTPUT
 
+**TESTER'S OUTPUT:**
+$TESTER_OUTPUT
+
 **YOUR TASKS:**
 1. Review what the developer claims to have done
-2. Verify the work was actually completed by checking files
-3. Look for any cheating patterns (disabled tests, silent fallbacks, etc.)
-4. Create a git commit (see guidelines below)
-5. Check if ALL tasks in $plan_file are now complete
+2. Review the tester's results - if tests failed, this is critical
+3. Verify the work was actually completed by checking files
+4. Look for any cheating patterns (disabled tests, silent fallbacks, etc.)
+5. Create a git commit (see guidelines below)
+6. Check if ALL tasks in $plan_file are now complete
 
 **VERIFICATION CHECKLIST:**
 - Did the developer actually implement code (not just analyze)?
 - Are all changes working correctly?
-- Do tests pass (if applicable)?
+- Did the tester's tests PASS? If not, do NOT mark task as complete
 - Is the task properly marked as complete in $plan_file?
 
 **GIT COMMIT GUIDELINES:**
@@ -337,6 +415,32 @@ Be thorough but concise in your verification."
         # Reset counter on successful iteration
         CONSECUTIVE_FAST_ITERATIONS=0
         echo -e "\033[32mNormal iteration timing - continuing...\033[0m"
+    fi
+
+    # Check for PAUSE file - allows human intervention
+    if [ -f "PAUSE" ]; then
+        echo -e "\033[33m==================================================================\033[0m"
+        echo -e "\033[33m== PAUSED - Human intervention requested\033[0m"
+        echo -e "\033[33m==================================================================\033[0m"
+        echo -e "\033[33mDevelopment is paused. To continue:\033[0m"
+        echo -e "\033[33m  - Remove the PAUSE file: rm PAUSE\033[0m"
+        echo -e "\033[33m  - Add feedback in $WORKING_DIR/FEEDBACK.md (optional)\033[0m"
+        echo -e "\033[33mWaiting...\033[0m"
+        while [ -f "PAUSE" ]; do
+            sleep 5
+        done
+        echo -e "\033[32mResuming development...\033[0m"
+
+        # Check if feedback was added
+        if [ -f "$WORKING_DIR/FEEDBACK.md" ]; then
+            echo -e "\033[36mFEEDBACK.md detected - will be processed in next iteration\033[0m"
+        fi
+    fi
+
+    # Archive FEEDBACK.md after it's been processed (move to logs)
+    if [ -n "$feedback_file" ] && [ -f "$feedback_file" ]; then
+        mv "$feedback_file" "logs/FEEDBACK-processed-$(date +%Y%m%d_%H%M%S).md"
+        echo -e "\033[36mFEEDBACK.md archived after processing\033[0m"
     fi
 
     sleep 1

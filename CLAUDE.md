@@ -33,7 +33,7 @@ The system uses Claude Opus throughout with strategic ultrathinking for complex 
 
 - **Opus (Standard)**: Used for regular development iterations
   - Standard development tasks (iterations 1, 2, 3, 5, 6, 7, etc.)
-  - All agents (Planner, Developer, Reviewer) use opus consistently
+  - All agents (Developer, Tester, Reviewer) use opus consistently
 
 ## Development Mode
 
@@ -60,8 +60,10 @@ docs/
 ├── PLAN.md          # Development roadmap (primary task list)
 ├── CLAUDE-NOTES.md  # AI architect analysis
 ├── QUESTIONS.md     # Clarification questions
-└── IDEAS.md         # Future improvements
+├── IDEAS.md         # Future improvements
+└── FEEDBACK.md      # Human feedback for next iteration (temporary)
 logs/                # AI session logs with timestamps
+PAUSE                # Create this file to pause development (project root)
 ```
 
 ### Failure Detection System
@@ -73,14 +75,29 @@ logs/                # AI session logs with timestamps
 ## Development Workflow
 
 ### Loop Mechanics in claudefsd-dev
-1. **Task Analysis**: Reads docs/PLAN.md and identifies all open tasks
-2. **Execution Strategy**: Chooses between single-agent deep work or parallel multi-agent execution
-3. **Implementation**: Executes tasks using selected approach with extensive error checking
+1. **Developer Agent**: Reads PLAN.md, implements next task(s)
+2. **Tester Agent**: Runs tests, linters, and verification checks
+3. **Reviewer Agent**: Reviews work, checks test results, creates git commit
 4. **Progress Update**: Updates docs/PLAN.md to mark completed tasks
-5. **Repeat**: Continues until all tasks complete or **<ALL DONE>** detected
+5. **Human Check**: Checks for PAUSE file, processes FEEDBACK.md if present
+6. **Repeat**: Continues until all tasks complete or **<VERIFIED_ALL_DONE>** detected
 
 ### Megathinking Mode
 Every 4th development cycle activates ultrathink mode with extended reasoning for architectural planning and high-level system design considerations.
+
+### Human Intervention
+The system supports human intervention during automated development:
+
+- **PAUSE file**: Create a file named `PAUSE` in the project root to pause development
+  - System waits until `PAUSE` is removed
+  - Use this when you need to log in, fix something manually, or review progress
+  - Example: `touch PAUSE` to pause, `rm PAUSE` to resume
+
+- **FEEDBACK.md**: Add feedback for the next iteration
+  - Create `docs/FEEDBACK.md` with instructions/corrections
+  - Developer agent reads it as HIGH PRIORITY in next iteration
+  - File is archived to `logs/` after processing
+  - Example: "The login endpoint needs OAuth, not basic auth"
 
 ## Error Handling Philosophy
 - **No cheating patterns**: Never disable tests, exclude files from compilation, or use silent fallbacks
@@ -98,8 +115,35 @@ Every 4th development cycle activates ultrathink mode with extended reasoning fo
 - Uses git for version control (no backup copies needed)
 
 ## Testing Strategy
+
+The Tester agent distinguishes between two types of tests:
+
+### Iteration Tests (run every cycle)
+- Unit tests, linters, type checks, syntax validation
+- Quick feedback on the current change
+- Must pass before moving to next task
+
+### Acceptance Tests (define completion)
+- Defined in PLAN.md under `## Test Criteria` or `## Acceptance Tests`
+- Integration tests, E2E tests, manual verification steps
+- When ALL acceptance tests pass, project is complete
+
+### Recommended PLAN.md Structure
+```markdown
+## Tasks
+- [ ] Task 1
+- [ ] Task 2
+
+## Test Criteria
+- [ ] All unit tests pass
+- [ ] App builds without errors
+- [ ] Login flow works end-to-end
+- [ ] API returns correct data for /users endpoint
+```
+
+### Testing Philosophy
 - Emphasizes integration tests over unit tests
-- Tests should exercise real systems (databases, APIs) non-destructively  
+- Tests should exercise real systems (databases, APIs) non-destructively
 - No mocking without explicit permission
 - Lint and architecture tests run frequently during development
 
