@@ -193,7 +193,7 @@ prepare_next_question_bg() {
     coordinator_prompt="${coordinator_prompt//\{qa_summary_by_domain\}/$qa_summary}"
     
     # Get coordinator decision
-    local next_persona=$(claude --model sonnet -p "$coordinator_prompt" 2>/dev/null | tail -1)
+    local next_persona=$(claude --model opus -p "$coordinator_prompt" 2>/dev/null | tail -1)
     
     # Validate and clean decision - remove spaces, newlines, and markdown formatting
     next_persona=$(echo "$next_persona" | tr -d ' \n\r' | sed 's/[*_`]//g')
@@ -312,7 +312,7 @@ ${prompt_template}"
             prompt_template="${prompt_template//\{security_qa_history\}/$persona_qa}"
             
             # Get question from Claude
-            local question=$(claude --model sonnet -p "$prompt_template" 2>/dev/null | tail -1)
+            local question=$(claude --model opus -p "$prompt_template" 2>/dev/null | tail -1)
             echo "$question" > "$QUESTION_CACHE"
             
             # Question is ready in cache, no output needed
@@ -384,7 +384,7 @@ Create a comprehensive requirements document that:
 Format the output as a clean, well-structured markdown document suitable for feeding into project planning.
 "
     
-    claude --model sonnet -p "$consolidation_prompt" > "$REQUIREMENTS_FILE"
+    claude --model opus -p "$consolidation_prompt" > "$REQUIREMENTS_FILE"
     
     echo -e "${GREEN}Requirements consolidated in $REQUIREMENTS_FILE${NC}"
     

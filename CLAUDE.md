@@ -15,8 +15,8 @@ claude-fsd dev          # Jump directly to development mode
 claudefsd-dev           # Main development script with intelligent loop
 
 # Planning and setup
-claudefsd-interview     # Interactive expert Q&A to gather requirements (uses sonnet with ultrathink)
-claudefsd-create-plan   # Create development plan from interview results (uses sonnet with ultrathink)
+claudefsd-interview     # Interactive expert Q&A to gather requirements (uses opus with ultrathink)
+claudefsd-create-plan   # Create development plan from interview results (uses opus with ultrathink)
 
 # Testing and validation
 ./test-failure-detection.sh  # Test failure detection mechanisms
@@ -24,16 +24,16 @@ claudefsd-create-plan   # Create development plan from interview results (uses s
 
 ## Model Selection Strategy
 
-The system uses Claude Sonnet throughout with strategic ultrathinking for complex work:
+The system uses Claude Opus throughout with strategic ultrathinking for complex work:
 
-- **Sonnet + Ultrathink**: Used for complex architectural work requiring deep thinking
+- **Opus + Ultrathink**: Used for complex architectural work requiring deep thinking
   - Requirements gathering (`claudefsd-interview`)
   - Architecture planning (`claudefsd-create-plan`)
   - Megathinking mode (every 4th iteration in development cycle)
 
-- **Sonnet (Standard)**: Used for regular development iterations
+- **Opus (Standard)**: Used for regular development iterations
   - Standard development tasks (iterations 1, 2, 3, 5, 6, 7, etc.)
-  - All agents (Planner, Developer, Reviewer) use sonnet consistently
+  - All agents (Planner, Developer, Reviewer) use opus consistently
 
 ## Development Mode
 
@@ -89,7 +89,8 @@ Every 4th development cycle activates ultrathink mode with extended reasoning fo
 - **Defensive programming**: All edge cases must throw proper exceptions
 
 ## Dependencies
-- **Required**: `claude` command (Claude CLI) - this is the only dependency needed
+- **Required**: `claude` command (Claude CLI)
+- **Required**: `jq` command (JSON processor for interview session management)
 
 ## Git Branch Strategy
 - Stays on current branch if it's a proper feature branch

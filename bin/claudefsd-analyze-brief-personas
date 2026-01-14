@@ -83,7 +83,7 @@ Include only personas that are truly relevant to this project.
 "
 
 echo "Determining relevant expert personas..."
-PERSONAS=$(claude --model sonnet -p "$coordinator_prompt" 2>/dev/null | tail -1)
+PERSONAS=$(claude --model opus -p "$coordinator_prompt" 2>/dev/null | tail -1)
 
 # Clean up and validate personas
 PERSONAS=$(echo "$PERSONAS" | tr -d ' \n\r')
@@ -172,7 +172,7 @@ Output ONLY the questions, one per line, no numbering or bullets.
 "
     
     # Generate questions
-    QUESTIONS=$(claude --model sonnet -p "$batch_prompt" 2>/dev/null)
+    QUESTIONS=$(claude --model opus -p "$batch_prompt" 2>/dev/null)
     
     # Add section header
     echo "" >> "$WORKING_DIR/QUESTIONS.md"

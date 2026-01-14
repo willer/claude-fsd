@@ -15,9 +15,14 @@ command_exists() {
 check_dependencies() {
     local missing_deps=()
 
-    # Check for claude (only required dependency)
+    # Check for claude (required)
     if ! command_exists claude; then
         missing_deps+=("claude")
+    fi
+
+    # Check for jq (required for interview session management)
+    if ! command_exists jq; then
+        missing_deps+=("jq")
     fi
 
     # Show critical errors
@@ -27,6 +32,8 @@ check_dependencies() {
             echo -e "  - $dep"
             if [ "$dep" = "claude" ]; then
                 echo -e "    Install from: https://docs.anthropic.com/en/docs/claude-code"
+            elif [ "$dep" = "jq" ]; then
+                echo -e "    Install with: brew install jq (macOS) or apt install jq (Linux)"
             fi
         done
         echo
