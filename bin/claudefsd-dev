@@ -108,10 +108,10 @@ Take your time to think deeply about the optimal approach before proceeding.
 </ultrathink>
 
 "
-        CLAUDE_MODEL="sonnet"
+        CLAUDE_MODEL="opus"
     else
         MEGATHINKING_MODE=""
-        CLAUDE_MODEL="sonnet"
+        CLAUDE_MODEL="opus"
     fi
 
     # Build the development prompt combining intelligent task selection with parallel execution

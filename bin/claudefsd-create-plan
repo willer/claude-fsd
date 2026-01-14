@@ -132,9 +132,9 @@ Take your time to think deeply about the best solution before generating your pl
 # Prepend ultrathink to the prompt
 prompt2="$ultrathink_instruction$prompt2"
 
-# Run planning with sonnet + ultrathink
-echo "Running claude with sonnet model (ultrathink mode)..."
-claude --model sonnet --dangerously-skip-permissions -p "$prompt2" | tee >(cat > $LOGFILE-ba3)
+# Run planning with opus + ultrathink
+echo "Running claude with opus model (ultrathink mode)..."
+claude --model opus --dangerously-skip-permissions -p "$prompt2" | tee >(cat > $LOGFILE-ba3)
 
 echo -e "\033[32m==================================================================\033[0m"
 echo -e "\033[32m== PLAN CREATION COMPLETE\033[0m"

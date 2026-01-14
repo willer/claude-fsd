@@ -67,8 +67,8 @@ DO NOT answer the questions yourself - just generate them for the user to answer
 "
 
 # run BA's
-echo "Running claude with sonnet model with ultrathink..."
-claude --model sonnet --dangerously-skip-permissions -p "$prompt1" | tee >(cat > $LOGFILE-ba1)
+echo "Running claude with opus model with ultrathink..."
+claude --model opus --dangerously-skip-permissions -p "$prompt1" | tee >(cat > $LOGFILE-ba1)
 
 echo -e "\033[32m==================================================================\033[0m"
 echo -e "\033[32m== ANALYSIS COMPLETE\033[0m"
