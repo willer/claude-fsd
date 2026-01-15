@@ -87,6 +87,10 @@ LOOP_COUNTER=0
 CONSECUTIVE_FAST_ITERATIONS=0
 MIN_ITERATION_TIME=300  # 5 minutes in seconds
 
+# Test command cache (in-memory, asked once per session)
+TEST_COMMAND=""
+LAST_TEST_OUTPUT=""
+
 while true; do
     # Record iteration start time
     ITERATION_START_TIME=$(date +%s)
@@ -189,6 +193,17 @@ You are an elite AI developer working in an automated development environment. Y
     if [ -n "$feedback_file" ]; then
         DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
 - $feedback_file (URGENT: Human feedback requiring immediate attention)"
+    fi
+
+    # Add failed test output if tests failed last iteration
+    if [ -n "$LAST_TEST_OUTPUT" ]; then
+        DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
+
+**URGENT: UNIT TESTS FAILED LAST ITERATION - FIX BEFORE CONTINUING**
+The following test output shows what failed. Fix these issues first:
+\`\`\`
+$LAST_TEST_OUTPUT
+\`\`\`"
     fi
 
     DEVELOPMENT_PROMPT="$DEVELOPMENT_PROMPT
@@ -338,90 +353,94 @@ Be thorough but concise in your code review."
     echo -e "\033[32m== TESTING PHASE\033[0m"
     echo -e "\033[32m==================================================================\033[0m"
 
-    # Determine if this is an acceptance test iteration (every 4th, with megathinking)
-    if [ $((LOOP_COUNTER % 4)) -eq 0 ]; then
-        ACCEPTANCE_TEST_MODE="
-**ACCEPTANCE TESTS (4th iteration - run these now):**
-Read the '## Acceptance Criteria' section in $plan_file.
-- Run each acceptance test (may include browser tests, integration tests)
-- Mark passing criteria with [x] in the plan file
-- If a previously-passing criterion now FAILS, add a bug task:
-  \`- [ ] [BUG] <description of what regressed>\`
-- Report which acceptance criteria pass/fail
-"
-    else
-        ACCEPTANCE_TEST_MODE="
-**ACCEPTANCE TESTS:** Skip this iteration (only run every 4th iteration).
-"
-    fi
-
-    # Define the tester prompt
-    TESTER_PROMPT="You are an expert QA engineer. Your job is to RUN TESTS and verify the code works.
-
-**DEVELOPER'S OUTPUT:**
-$DEVELOPER_OUTPUT
-
-**VERIFIER'S OUTPUT:**
-$VERIFIER_OUTPUT
-
-**PROJECT FILES:**
-- $plan_file (check '## Test Infrastructure' for test commands)
-- $plan_file (check '## Acceptance Criteria' for acceptance tests)
-
-**YOUR TASKS:**
-
-**1. UNIT TESTS (run every iteration):**
-Read '## Test Infrastructure' section in $plan_file for test commands.
-- Run the test suite (pytest, npm test, cargo test, etc.)
-- Run linters if configured
-- Report: which tests passed/failed
-- If tests FAIL, development cannot continue - report the failure clearly
-
-**2. TEST INFRASTRUCTURE CHECK:**
-If no '## Test Infrastructure' section exists OR no tests can be found:
-- Add task: \`- [ ] [INFRA] Set up test infrastructure\`
-- Report that TDD cannot proceed without test infrastructure
-$ACCEPTANCE_TEST_MODE
-**OUTPUT FORMAT:**
-- **<unit_tests>**: PASS or FAIL
-- **<unit_details>**: What tests ran, any failures
-- **<acceptance_tests>**: PASS, FAIL, SKIPPED, or NO_CRITERIA
-- **<acceptance_details>**: Which criteria checked (if applicable)
-- **<infrastructure>**: OK or MISSING
-- **<bugs_added>**: List any [BUG] tasks added for regressions
-- **<all_tests_pass>**: YES or NO
-
-**CRITICAL:** If unit tests fail, output <TESTS_FAILED> so the loop knows to stop.
-If ALL tasks in the plan are complete AND all tests pass, output: <VERIFIED_ALL_DONE>
-"
-
     TESTER_LOGFILE="${LOGFILE}-tester"
-    echo "=== TESTER PROMPT ===" | tee $TESTER_LOGFILE
-    echo "$TESTER_PROMPT" | tee -a $TESTER_LOGFILE
-    echo "=== END PROMPT ===" | tee -a $TESTER_LOGFILE
-    echo "" >> $TESTER_LOGFILE
-    echo "=== OUTPUT ===" >> $TESTER_LOGFILE
+    UNIT_TESTS_PASSED=false
 
-    # Run tester
-    # Raw JSON goes to log, filtered text to screen
-    # Use stdin instead of -p to avoid "Argument list too long" errors
-    echo -e "\033[36mRunning tester with $CLAUDE_MODEL model...\033[0m"
-    time echo "$TESTER_PROMPT" | claude --model $CLAUDE_MODEL --print --verbose --output-format=stream-json --include-partial-messages --dangerously-skip-permissions 2>&1 | tee -a $TESTER_LOGFILE | jq -R --unbuffered -r '. as $line | try (fromjson | if .type == "assistant" then (.message.content[]? | if .type == "text" then .text elif .type == "tool_use" then "\n[TOOL: " + .name + "]\n" else empty end) // empty elif .type == "stream_event" and .event == "content_block_start" and .content_block.type == "tool_use" then "\n[TOOL: " + .content_block.name + "]\n" elif .type == "result" then "\n=== RESULT ===\n" + (.result // "no result") else empty end) catch $line'
+    # ========== UNIT TESTS (bash-driven, every iteration) ==========
 
-    # Check if tests failed
-    if sed -n '/=== OUTPUT ===/,$p' $TESTER_LOGFILE | grep -q "<TESTS_FAILED>"; then
-        echo -e "\033[31m==================================================================\033[0m"
-        echo -e "\033[31m== TESTS FAILED - Review tester output above\033[0m"
-        echo -e "\033[31m==================================================================\033[0m"
-        # Continue to next iteration - developer needs to fix the tests
+    # Get test command if not cached
+    if [ -z "$TEST_COMMAND" ]; then
+        echo -e "\033[36mAsking Claude for test command (one-time per session)...\033[0m"
+
+        TEST_QUERY="Read $plan_file and any project config files (package.json, pyproject.toml, Makefile, etc).
+What is the single shell command to run unit tests for this project?
+
+Reply with ONLY the command, nothing else. Examples of valid responses:
+- pytest
+- npm test
+- cargo test
+- make test
+- go test ./...
+
+If there are no tests configured yet, reply with: NO_TESTS"
+
+        TEST_COMMAND=$(echo "$TEST_QUERY" | claude --model haiku --print 2>/dev/null | tail -1 | tr -d '\n\r')
+
+        if [ -z "$TEST_COMMAND" ]; then
+            TEST_COMMAND="NO_TESTS"
+        fi
+
+        echo -e "\033[36mCached test command: $TEST_COMMAND\033[0m"
     fi
 
-    # Check if all done (tester confirmed)
-    if sed -n '/=== OUTPUT ===/,$p' $TESTER_LOGFILE | grep -q "^<VERIFIED_ALL_DONE>$"; then
-        echo -e "\033[32m==================================================================\033[0m"
-        echo -e "\033[32m== PROJECT COMPLETE - ALL TASKS VERIFIED!\033[0m"
-        echo -e "\033[32m==================================================================\033[0m"
-        exit 0
+    # Run unit tests directly (fast, no AI overhead)
+    if [ "$TEST_COMMAND" = "NO_TESTS" ]; then
+        echo -e "\033[33mNo test infrastructure found - skipping unit tests\033[0m"
+        echo "No test infrastructure configured" >> $TESTER_LOGFILE
+        UNIT_TESTS_PASSED=true  # Don't block on missing tests, but developer should add them
+    else
+        echo -e "\033[36mRunning: $TEST_COMMAND\033[0m"
+        echo "=== UNIT TEST OUTPUT ===" >> $TESTER_LOGFILE
+
+        if eval "$TEST_COMMAND" >> $TESTER_LOGFILE 2>&1; then
+            echo -e "\033[32m✓ Unit tests PASSED\033[0m"
+            UNIT_TESTS_PASSED=true
+            LAST_TEST_OUTPUT=""
+        else
+            echo -e "\033[31m✗ Unit tests FAILED\033[0m"
+            UNIT_TESTS_PASSED=false
+            # Capture last 100 lines for developer feedback
+            LAST_TEST_OUTPUT=$(tail -100 $TESTER_LOGFILE)
+            echo -e "\033[31mTest output saved - will be provided to developer next iteration\033[0m"
+        fi
+    fi
+
+    # ========== ACCEPTANCE TESTS (AI-driven, every 4th iteration) ==========
+
+    if [ $((LOOP_COUNTER % 4)) -eq 0 ]; then
+        echo -e "\033[33m== Running acceptance tests (4th iteration) ==\033[0m"
+
+        ACCEPTANCE_PROMPT="You are a QA engineer checking acceptance criteria.
+
+Read the '## Acceptance Criteria' section in $plan_file.
+For each criterion:
+1. Verify if it passes (run commands, check files, test endpoints as needed)
+2. Mark passing criteria with [x] in the plan file
+3. If a previously-passing criterion now FAILS, add: \`- [ ] [BUG] <description>\`
+
+Also check: Are ALL tasks in $plan_file complete? If yes AND all acceptance criteria pass, output exactly:
+<VERIFIED_ALL_DONE>
+
+Be concise in your output."
+
+        echo "=== ACCEPTANCE TEST OUTPUT ===" >> $TESTER_LOGFILE
+        echo "$ACCEPTANCE_PROMPT" | claude --model $CLAUDE_MODEL --print --dangerously-skip-permissions 2>&1 | tee -a $TESTER_LOGFILE
+
+        # Check if all done
+        if grep -q "<VERIFIED_ALL_DONE>" $TESTER_LOGFILE; then
+            echo -e "\033[32m==================================================================\033[0m"
+            echo -e "\033[32m== PROJECT COMPLETE - ALL TASKS VERIFIED!\033[0m"
+            echo -e "\033[32m==================================================================\033[0m"
+            exit 0
+        fi
+    fi
+
+    # If unit tests failed, continue to next iteration (developer needs to fix)
+    if [ "$UNIT_TESTS_PASSED" = false ]; then
+        echo -e "\033[31m==================================================================\033[0m"
+        echo -e "\033[31m== UNIT TESTS FAILED - Developer will fix next iteration\033[0m"
+        echo -e "\033[31m==================================================================\033[0m"
+        # LAST_TEST_OUTPUT is set above, will be fed to developer in next iteration
     fi
 
     # Check for @STOP marker in plan file - if all tasks before @STOP are complete, pause for human review
