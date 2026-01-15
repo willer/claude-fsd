@@ -263,16 +263,17 @@ When using parallel Task agents, ensure each one:
 
 IMPORTANT: You must ACTUALLY IMPLEMENT tasks, not just describe what should be done. Use Edit, Write, Bash, and Task tools to complete real work. Begin by analyzing $plan_file and then IMPLEMENT the next task in order."
 
-    # Save the prompt to the log file first
-    echo "=== DEVELOPMENT PROMPT ===" > $LOGFILE
-    echo "$DEVELOPMENT_PROMPT" >> $LOGFILE
-    echo "=== END PROMPT ===" >> $LOGFILE
+    # Save the prompt to the log file and print to screen
+    echo "=== DEVELOPMENT PROMPT ===" | tee $LOGFILE
+    echo "$DEVELOPMENT_PROMPT" | tee -a $LOGFILE
+    echo "=== END PROMPT ===" | tee -a $LOGFILE
     echo "" >> $LOGFILE
     echo "=== OUTPUT ===" >> $LOGFILE
 
     # Run claude and append output to the log file
-    echo "Running development with $CLAUDE_MODEL model..."
-    time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "$DEVELOPMENT_PROMPT" 2>&1 | tee -a $LOGFILE
+    # Raw JSON goes to log, filtered text to screen
+    echo -e "\033[36mRunning development with $CLAUDE_MODEL model...\033[0m"
+    time claude --model $CLAUDE_MODEL --print --verbose --output-format=stream-json --include-partial-messages --dangerously-skip-permissions -p "$DEVELOPMENT_PROMPT" 2>&1 | tee -a $LOGFILE | jq --unbuffered -r 'if .type == "assistant" then (.message.content[]? | if .type == "text" then .text elif .type == "tool_use" then "\n[TOOL: " + .name + "]\n" else empty end) // empty elif .type == "stream_event" and .event == "content_block_start" and .content_block.type == "tool_use" then "\n[TOOL: " + .content_block.name + "]\n" elif .type == "result" then "\n=== RESULT ===\n" + (.result // "no result") else empty end'
 
     # Extract what task was worked on from the developer's output
     DEVELOPER_OUTPUT=$(sed -n '/=== OUTPUT ===/,$p' $LOGFILE)
@@ -317,14 +318,16 @@ $DEVELOPER_OUTPUT
 Be thorough but concise in your code review."
 
     VERIFIER_LOGFILE="${LOGFILE}-verifier"
-    echo "=== VERIFIER PROMPT ===" > $VERIFIER_LOGFILE
-    echo "$VERIFIER_PROMPT" >> $VERIFIER_LOGFILE
-    echo "=== END PROMPT ===" >> $VERIFIER_LOGFILE
+    echo "=== VERIFIER PROMPT ===" | tee $VERIFIER_LOGFILE
+    echo "$VERIFIER_PROMPT" | tee -a $VERIFIER_LOGFILE
+    echo "=== END PROMPT ===" | tee -a $VERIFIER_LOGFILE
     echo "" >> $VERIFIER_LOGFILE
     echo "=== OUTPUT ===" >> $VERIFIER_LOGFILE
 
     # Run verifier
-    time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "$VERIFIER_PROMPT" 2>&1 | tee -a $VERIFIER_LOGFILE
+    # Raw JSON goes to log, filtered text to screen
+    echo -e "\033[36mRunning verifier with $CLAUDE_MODEL model...\033[0m"
+    time claude --model $CLAUDE_MODEL --print --verbose --output-format=stream-json --include-partial-messages --dangerously-skip-permissions -p "$VERIFIER_PROMPT" 2>&1 | tee -a $VERIFIER_LOGFILE | jq --unbuffered -r 'if .type == "assistant" then (.message.content[]? | if .type == "text" then .text elif .type == "tool_use" then "\n[TOOL: " + .name + "]\n" else empty end) // empty elif .type == "stream_event" and .event == "content_block_start" and .content_block.type == "tool_use" then "\n[TOOL: " + .content_block.name + "]\n" elif .type == "result" then "\n=== RESULT ===\n" + (.result // "no result") else empty end'
 
     # Extract verifier output for the tester
     VERIFIER_OUTPUT=$(sed -n '/=== OUTPUT ===/,$p' $VERIFIER_LOGFILE)
@@ -391,15 +394,16 @@ If ALL tasks in the plan are complete AND all tests pass, output: <VERIFIED_ALL_
 "
 
     TESTER_LOGFILE="${LOGFILE}-tester"
-    echo "=== TESTER PROMPT ===" > $TESTER_LOGFILE
-    echo "$TESTER_PROMPT" >> $TESTER_LOGFILE
-    echo "=== END PROMPT ===" >> $TESTER_LOGFILE
+    echo "=== TESTER PROMPT ===" | tee $TESTER_LOGFILE
+    echo "$TESTER_PROMPT" | tee -a $TESTER_LOGFILE
+    echo "=== END PROMPT ===" | tee -a $TESTER_LOGFILE
     echo "" >> $TESTER_LOGFILE
     echo "=== OUTPUT ===" >> $TESTER_LOGFILE
 
     # Run tester
-    echo "Running tester with $CLAUDE_MODEL model..."
-    time claude --model $CLAUDE_MODEL --dangerously-skip-permissions -p "$TESTER_PROMPT" 2>&1 | tee -a $TESTER_LOGFILE
+    # Raw JSON goes to log, filtered text to screen
+    echo -e "\033[36mRunning tester with $CLAUDE_MODEL model...\033[0m"
+    time claude --model $CLAUDE_MODEL --print --verbose --output-format=stream-json --include-partial-messages --dangerously-skip-permissions -p "$TESTER_PROMPT" 2>&1 | tee -a $TESTER_LOGFILE | jq --unbuffered -r 'if .type == "assistant" then (.message.content[]? | if .type == "text" then .text elif .type == "tool_use" then "\n[TOOL: " + .name + "]\n" else empty end) // empty elif .type == "stream_event" and .event == "content_block_start" and .content_block.type == "tool_use" then "\n[TOOL: " + .content_block.name + "]\n" elif .type == "result" then "\n=== RESULT ===\n" + (.result // "no result") else empty end'
 
     # Check if tests failed
     if sed -n '/=== OUTPUT ===/,$p' $TESTER_LOGFILE | grep -q "<TESTS_FAILED>"; then
