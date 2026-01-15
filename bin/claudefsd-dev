@@ -272,8 +272,9 @@ IMPORTANT: You must ACTUALLY IMPLEMENT tasks, not just describe what should be d
 
     # Run claude and append output to the log file
     # Raw JSON goes to log, filtered text to screen
+    # Use stdin instead of -p to avoid "Argument list too long" errors
     echo -e "\033[36mRunning development with $CLAUDE_MODEL model...\033[0m"
-    time claude --model $CLAUDE_MODEL --print --verbose --output-format=stream-json --include-partial-messages --dangerously-skip-permissions -p "$DEVELOPMENT_PROMPT" 2>&1 | tee -a $LOGFILE | jq -R --unbuffered -r '. as $line | try (fromjson | if .type == "assistant" then (.message.content[]? | if .type == "text" then .text elif .type == "tool_use" then "\n[TOOL: " + .name + "]\n" else empty end) // empty elif .type == "stream_event" and .event == "content_block_start" and .content_block.type == "tool_use" then "\n[TOOL: " + .content_block.name + "]\n" elif .type == "result" then "\n=== RESULT ===\n" + (.result // "no result") else empty end) catch $line'
+    time echo "$DEVELOPMENT_PROMPT" | claude --model $CLAUDE_MODEL --print --verbose --output-format=stream-json --include-partial-messages --dangerously-skip-permissions 2>&1 | tee -a $LOGFILE | jq -R --unbuffered -r '. as $line | try (fromjson | if .type == "assistant" then (.message.content[]? | if .type == "text" then .text elif .type == "tool_use" then "\n[TOOL: " + .name + "]\n" else empty end) // empty elif .type == "stream_event" and .event == "content_block_start" and .content_block.type == "tool_use" then "\n[TOOL: " + .content_block.name + "]\n" elif .type == "result" then "\n=== RESULT ===\n" + (.result // "no result") else empty end) catch $line'
 
     # Extract what task was worked on from the developer's output
     DEVELOPER_OUTPUT=$(sed -n '/=== OUTPUT ===/,$p' $LOGFILE)
@@ -326,8 +327,9 @@ Be thorough but concise in your code review."
 
     # Run verifier
     # Raw JSON goes to log, filtered text to screen
+    # Use stdin instead of -p to avoid "Argument list too long" errors
     echo -e "\033[36mRunning verifier with $CLAUDE_MODEL model...\033[0m"
-    time claude --model $CLAUDE_MODEL --print --verbose --output-format=stream-json --include-partial-messages --dangerously-skip-permissions -p "$VERIFIER_PROMPT" 2>&1 | tee -a $VERIFIER_LOGFILE | jq -R --unbuffered -r '. as $line | try (fromjson | if .type == "assistant" then (.message.content[]? | if .type == "text" then .text elif .type == "tool_use" then "\n[TOOL: " + .name + "]\n" else empty end) // empty elif .type == "stream_event" and .event == "content_block_start" and .content_block.type == "tool_use" then "\n[TOOL: " + .content_block.name + "]\n" elif .type == "result" then "\n=== RESULT ===\n" + (.result // "no result") else empty end) catch $line'
+    time echo "$VERIFIER_PROMPT" | claude --model $CLAUDE_MODEL --print --verbose --output-format=stream-json --include-partial-messages --dangerously-skip-permissions 2>&1 | tee -a $VERIFIER_LOGFILE | jq -R --unbuffered -r '. as $line | try (fromjson | if .type == "assistant" then (.message.content[]? | if .type == "text" then .text elif .type == "tool_use" then "\n[TOOL: " + .name + "]\n" else empty end) // empty elif .type == "stream_event" and .event == "content_block_start" and .content_block.type == "tool_use" then "\n[TOOL: " + .content_block.name + "]\n" elif .type == "result" then "\n=== RESULT ===\n" + (.result // "no result") else empty end) catch $line'
 
     # Extract verifier output for the tester
     VERIFIER_OUTPUT=$(sed -n '/=== OUTPUT ===/,$p' $VERIFIER_LOGFILE)
@@ -402,8 +404,9 @@ If ALL tasks in the plan are complete AND all tests pass, output: <VERIFIED_ALL_
 
     # Run tester
     # Raw JSON goes to log, filtered text to screen
+    # Use stdin instead of -p to avoid "Argument list too long" errors
     echo -e "\033[36mRunning tester with $CLAUDE_MODEL model...\033[0m"
-    time claude --model $CLAUDE_MODEL --print --verbose --output-format=stream-json --include-partial-messages --dangerously-skip-permissions -p "$TESTER_PROMPT" 2>&1 | tee -a $TESTER_LOGFILE | jq -R --unbuffered -r '. as $line | try (fromjson | if .type == "assistant" then (.message.content[]? | if .type == "text" then .text elif .type == "tool_use" then "\n[TOOL: " + .name + "]\n" else empty end) // empty elif .type == "stream_event" and .event == "content_block_start" and .content_block.type == "tool_use" then "\n[TOOL: " + .content_block.name + "]\n" elif .type == "result" then "\n=== RESULT ===\n" + (.result // "no result") else empty end) catch $line'
+    time echo "$TESTER_PROMPT" | claude --model $CLAUDE_MODEL --print --verbose --output-format=stream-json --include-partial-messages --dangerously-skip-permissions 2>&1 | tee -a $TESTER_LOGFILE | jq -R --unbuffered -r '. as $line | try (fromjson | if .type == "assistant" then (.message.content[]? | if .type == "text" then .text elif .type == "tool_use" then "\n[TOOL: " + .name + "]\n" else empty end) // empty elif .type == "stream_event" and .event == "content_block_start" and .content_block.type == "tool_use" then "\n[TOOL: " + .content_block.name + "]\n" elif .type == "result" then "\n=== RESULT ===\n" + (.result // "no result") else empty end) catch $line'
 
     # Check if tests failed
     if sed -n '/=== OUTPUT ===/,$p' $TESTER_LOGFILE | grep -q "<TESTS_FAILED>"; then
