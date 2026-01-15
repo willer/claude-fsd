@@ -33,7 +33,7 @@ The system uses Claude Opus throughout with strategic ultrathinking for complex 
 
 - **Opus (Standard)**: Used for regular development iterations
   - Standard development tasks (iterations 1, 2, 3, 5, 6, 7, etc.)
-  - All agents (Planner, Developer, Reviewer) use opus consistently
+  - All agents (Developer, Verifier, Tester) use opus consistently
 
 ## Development Mode
 
@@ -72,23 +72,62 @@ Example:
 
 ## Architecture
 
-### Development Loop Design
-The system uses an intelligent development loop that:
-- **Task Selection**: Analyzes docs/PLAN.md to identify open tasks and dependencies
-- **Adaptive Execution**: Chooses between single-agent deep work or parallel Task agents based on task nature
-- **Progress Tracking**: Updates docs/PLAN.md after each iteration
-- **Megathinking**: Every 4th iteration activates ultrathink mode for architectural planning
+### Development Loop Design (Three-Agent Flow)
+Each iteration runs three specialized agents in sequence:
+
+```
+Developer (TDD) → Verifier (code review) → Tester (test execution)
+```
+
+1. **Developer Agent**: Implements tasks using TDD (test-first)
+2. **Verifier Agent**: Code review only, creates git commits
+3. **Tester Agent**: Runs unit tests (every iteration) + acceptance tests (every 4th)
 
 ### Key Files Structure
 ```
 docs/
 ├── BRIEF.md         # Project description (preferred location)
-├── PLAN.md          # Development roadmap (primary task list)
+├── PLAN.md          # Development roadmap (see structure below)
 ├── CLAUDE-NOTES.md  # AI architect analysis
 ├── QUESTIONS.md     # Clarification questions
-└── IDEAS.md         # Future improvements
+├── IDEAS.md         # Future improvements
+└── FEEDBACK.md      # Human feedback (temporary, archived after processing)
 logs/                # AI session logs with timestamps
+PAUSE                # Create to pause development (project root)
 ```
+
+### PLAN.md Required Structure
+```markdown
+## Tasks
+- [ ] Task description here
+- [ ] Another task
+
+## Test Infrastructure
+<!-- Required - Tester uses these commands -->
+- Unit tests: `pytest tests/`
+- Lint: `ruff check .`
+- Type check: `mypy src/`
+- Acceptance: `playwright test`
+
+## Acceptance Criteria
+<!-- Tester checks every 4th iteration -->
+- [ ] Feature X works end-to-end
+- [ ] API returns correct data
+- [ ] Performance meets requirements
+```
+
+### Human Intervention
+
+**PAUSE file**: Create `PAUSE` in project root to pause the loop. Remove to resume.
+```bash
+touch PAUSE    # Pause development
+rm PAUSE       # Resume development
+```
+
+**FEEDBACK.md**: Add urgent feedback for the next iteration.
+- Create `docs/FEEDBACK.md` with instructions/corrections
+- Developer reads it as HIGH PRIORITY
+- Archived to `logs/` after processing
 
 ### Failure Detection System
 - Monitors iteration timing (minimum 5 minutes expected)
@@ -99,14 +138,17 @@ logs/                # AI session logs with timestamps
 ## Development Workflow
 
 ### Loop Mechanics in claudefsd-dev
-1. **Task Analysis**: Reads docs/PLAN.md and identifies all open tasks
-2. **Execution Strategy**: Chooses between single-agent deep work or parallel multi-agent execution
-3. **Implementation**: Executes tasks using selected approach with extensive error checking
-4. **Progress Update**: Updates docs/PLAN.md to mark completed tasks
-5. **Repeat**: Continues until all tasks complete or **<ALL DONE>** detected
+1. **Developer Phase**: TDD - write test first, then implementation
+2. **Verifier Phase**: Code review, cheating detection, git commit
+3. **Tester Phase**: Run unit tests, check acceptance criteria (every 4th)
+4. **Human Check**: Process PAUSE file, archive FEEDBACK.md
+5. **Repeat**: Until all tasks complete or `<VERIFIED_ALL_DONE>` detected
 
-### Megathinking Mode
-Every 4th development cycle activates ultrathink mode with extended reasoning for architectural planning and high-level system design considerations.
+### Megathinking Mode + Acceptance Tests
+Every 4th iteration activates:
+- Ultrathink mode for architectural planning
+- Full acceptance test suite execution
+- Regression detection (adds `[BUG]` tasks if criteria fail)
 
 ## Error Handling Philosophy
 - **No cheating patterns**: Never disable tests, exclude files from compilation, or use silent fallbacks
@@ -123,10 +165,33 @@ Every 4th development cycle activates ultrathink mode with extended reasoning fo
 - Uses git for version control (no backup copies needed)
 
 ## Testing Strategy
+
+### TDD Mandate
+Developer MUST follow Test-Driven Development:
+1. **RED**: Write a failing test first
+2. **GREEN**: Write minimum code to pass
+3. **REFACTOR**: Clean up while tests pass
+
+### Two-Tier Testing
+| Type | When | Purpose |
+|------|------|---------|
+| **Unit tests** | Every iteration | Verify current change works |
+| **Acceptance tests** | Every 4th iteration | Verify features work end-to-end, detect regressions |
+
+### Test Infrastructure Required
+Projects must have `## Test Infrastructure` section in PLAN.md.
+If missing, Tester adds: `- [ ] [INFRA] Set up test infrastructure`
+
+### Regression Handling
+If acceptance test was passing but now fails:
+- Tester adds: `- [ ] [BUG] <description of regression>`
+- Bug tasks take priority in next iteration
+
+### Testing Philosophy
 - Emphasizes integration tests over unit tests
-- Tests should exercise real systems (databases, APIs) non-destructively  
+- Tests should exercise real systems (databases, APIs) non-destructively
 - No mocking without explicit permission
-- Lint and architecture tests run frequently during development
+- Lint and architecture tests run frequently
 
 ## Common Bash Scripting Mistakes to Avoid
 - **Never use `local` outside of functions**: The `local` keyword can only be used inside bash functions. Use regular variable assignment instead.
