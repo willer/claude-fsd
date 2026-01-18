@@ -237,6 +237,14 @@ You MUST follow Test-Driven Development:
 2. **GREEN**: Write the minimum code to make the test pass
 3. **REFACTOR**: Clean up the code while keeping tests passing
 
+**CRITICAL: NO MOCKS ALLOWED**
+- Do NOT use unittest.mock, MagicMock, patch, or any mocking libraries
+- Do NOT create fake/stub implementations of real services
+- Tests MUST exercise real code paths with real dependencies
+- Use integration tests that hit real databases, APIs, filesystems
+- If a dependency isn't available, the test should FAIL (not be mocked)
+- The only exception: explicit user permission for specific mocks
+
 For each task:
 - Write the test BEFORE writing implementation code
 - Run tests using commands from '## Test Infrastructure' in $plan_file
@@ -318,6 +326,8 @@ $DEVELOPER_OUTPUT
 - Are there any cheating patterns or anti-patterns?
 - Is the code well-structured and maintainable?
 - Is the task properly marked as complete in $plan_file?
+- **NO MOCKS**: Check for unittest.mock, MagicMock, patch, @mock - these are FORBIDDEN
+  - If mocks are found, DO NOT commit - report as a blocker
 
 **GIT COMMIT GUIDELINES:**
 - If the code looks good: Definitely commit with a clear message
